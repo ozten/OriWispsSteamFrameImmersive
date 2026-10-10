@@ -7,7 +7,21 @@ scenes show real depth.
 Developed on a Steam Frame (ARM64, Proton ARM64 + FEX), but nothing here is
 Frame-specific in principle.
 
-**Status:** early spike: checking that BepInEx 6 (IL2CPP) loads under Proton/FEX.
+**Status:** BepInEx runs under Proton/FEX; side-by-side stereo renders in the window; SteamVR stereo overlay output is written but untested.
+
+## Controls
+
+| Key | Action |
+|---|---|
+| F9 | Stereo on/off |
+| F11 | Show the 3D image in the headset (SteamVR overlay); Shift+F11 recenters it |
+| F10 | Swap eyes |
+| `-` / `=` | Eye separation |
+| `[` / `]` | Zero-parallax (screen) depth |
+| F8 | Write a camera report and capture both eye images |
+| F7 | Reload the core plugin |
+
+All settings live in `BepInEx/config/com.ozten.orivr.cfg` and are re-read within a second when the file changes.
 
 ## How it works (planned)
 
@@ -45,5 +59,6 @@ and `deploy.sh` sets `UpdateInteropAssemblies = false`. Re-run both after a game
 
 - `scripts/`: backup, fetch, interop generation, deploy/uninstall
 - `tools/InteropGen/`: native interop generator (mirrors BepInEx's Il2CppInteropManager)
-- `src/`: plugin source (coming)
+- `src/OriVR/`: small, stable host plugin. It owns the Il2Cpp-registered types and hot-reloads the core
+- `src/OriVR.Core/`: everything else (stereo rendering, VR overlay, probe). Rebuild with `scripts/dev.sh` while the game runs and it reloads in place
 - `docs/NOTES.md`: findings and environment notes

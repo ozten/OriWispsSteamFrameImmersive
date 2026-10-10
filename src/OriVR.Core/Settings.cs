@@ -12,6 +12,9 @@ public static class Settings
     public static ConfigEntry<float> ConvergenceOffset;
     public static ConfigEntry<bool> SwapEyes;
     public static ConfigEntry<float> EyeResolutionScale;
+    public static ConfigEntry<bool> OverlayEnabled;
+    public static ConfigEntry<float> OverlayWidth;
+    public static ConfigEntry<float> OverlayDistance;
 
     private static ConfigFile config;
     private static System.DateTime lastWrite;
@@ -26,6 +29,10 @@ public static class Settings
             "Zero-parallax depth relative to the playfield (z=0 plane). Positive pushes the screen plane further away. Keys: [ / ]");
         SwapEyes = cfg.Bind("Stereo", "SwapEyes", false, "Swap left/right images (cross-eyed viewing). Key: F10");
         EyeResolutionScale = cfg.Bind("Stereo", "EyeResolutionScale", 1.0f, "Per-eye render size relative to the game window.");
+        OverlayEnabled = cfg.Bind("VR", "OverlayEnabled", false,
+            "Show the stereo pair in the headset as a floating SteamVR 3D window (needs Stereo.Enabled). Key: F11; Shift+F11 recenters.");
+        OverlayWidth = cfg.Bind("VR", "OverlayWidth", 2.5f, "Width of the floating window in meters.");
+        OverlayDistance = cfg.Bind("VR", "OverlayDistance", 2.5f, "Distance from your head in meters (applied on recenter).");
         lastWrite = File.GetLastWriteTimeUtc(cfg.ConfigFilePath);
     }
 

@@ -27,6 +27,10 @@ public class StereoController
     private bool active;
     private int captureCount;
 
+    private readonly VrOverlay overlay = new();
+    private readonly string pluginDir;
+    public StereoController(string pluginDir) => this.pluginDir = pluginDir;
+
     private static string CaptureTrigger => Path.Combine(Paths.BepInExRootPath, "orivr-capture");
 
     public void Update()
@@ -49,7 +53,17 @@ public class StereoController
         if (main != Cam || !want) Deactivate();
         if (want && !active) Activate(main);
         if (active) EnsureTextures();
+
+        var wantOverlay = active && Settings.OverlayEnabled.Value;
+        if (wantOverlay && !overlay.Running && !overlayFailed) overlayFailed = !overlay.Start(pluginDir);
+        if (!wantOverlay)
+        {
+            overlay.Stop();
+            overlayFailed = false;
+        }
     }
+
+    private bool overlayFailed;
 
     private void HandleKeys()
     {
@@ -60,6 +74,8 @@ public class StereoController
         else if (Input.GetKeyDown(KeyCode.Equals)) Settings.Separation.Value += 0.1f;
         else if (Input.GetKeyDown(KeyCode.LeftBracket)) Settings.ConvergenceOffset.Value -= 1f;
         else if (Input.GetKeyDown(KeyCode.RightBracket)) Settings.ConvergenceOffset.Value += 1f;
+        else if (Input.GetKeyDown(KeyCode.F11) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) overlay.Recenter();
+        else if (Input.GetKeyDown(KeyCode.F11)) Settings.OverlayEnabled.Value = !Settings.OverlayEnabled.Value;
         else changed = false;
         if (!changed) return;
         Settings.Save();
@@ -67,7 +83,7 @@ public class StereoController
     }
 
     private static string Describe() =>
-        $"stereo={Settings.StereoEnabled.Value} sep={Settings.Separation.Value:F2} conv+={Settings.ConvergenceOffset.Value:F1} swap={Settings.SwapEyes.Value} scale={Settings.EyeResolutionScale.Value:F2}";
+        $"stereo={Settings.StereoEnabled.Value} sep={Settings.Separation.Value:F2} conv+={Settings.ConvergenceOffset.Value:F1} swap={Settings.SwapEyes.Value} scale={Settings.EyeResolutionScale.Value:F2} overlay={Settings.OverlayEnabled.Value}";
 
     private void Activate(Camera cam)
     {
@@ -95,6 +111,7 @@ public class StereoController
 
     public void Shutdown()
     {
+        overlay.Stop();
         Deactivate();
         if (LeftEye != null) { LeftEye.Release(); RightEye.Release(); LeftEye = RightEye = null; }
     }
@@ -172,7 +189,26 @@ public class StereoController
             CaptureRequested = false;
             Capture();
         }
-        DrawSideBySide();
+        var swap = Settings.SwapEyes.Value;
+        if (overlay.Running)
+        {
+            overlay.Submit(swap ? RightEye : LeftEye, swap ? LeftEye : RightEye);
+            DrawMono(); // the 3D image is in the headset; keep the flat window looking normal
+        }
+        else
+        {
+            DrawSideBySide();
+        }
+    }
+
+    private void DrawMono()
+    {
+        float w = Screen.width, h = Screen.height;
+        RenderTexture.active = null;
+        GL.PushMatrix();
+        GL.LoadPixelMatrix(0, w, 0, h);
+        Graphics.DrawTexture(new Rect(0, 0, w, h), LeftEye);
+        GL.PopMatrix();
     }
 
     private void Capture()

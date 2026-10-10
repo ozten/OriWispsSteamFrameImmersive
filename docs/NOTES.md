@@ -32,3 +32,8 @@
   With convergence at the playfield (about 29) the HUD lands at screen depth for free.
 - Most renderers are queue 2000 (only about 9 transparent at 3000).
 - Window: 1280x720. The boot splash uses a separate ortho camera.
+
+## 2026-10-09: Stereo prototype
+- The SBS-in-window prototype works: two renders per frame, no errors, stable while toggling. The first version drew upside down (fixed).
+- User-tuned comfortable values: separation 0.8, ConvergenceOffset -14 (screen plane about 15 units from the camera, so the scene sits behind the window). These are now the defaults.
+- Proton Experimental ARM64 vrclient supports IVROverlay_028 / IVRSystem_026, which matches OpenVR SDK v2.15.6 (used here).

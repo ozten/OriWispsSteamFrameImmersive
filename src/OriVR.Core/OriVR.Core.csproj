@@ -17,6 +17,9 @@
     <Reference><Private>false</Private></Reference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)../../vendor/openvr/openvr_api.dll" CopyToOutputDirectory="PreserveNewest" Link="openvr_api.dll" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../OriVR/OriVR.csproj" Private="false" />
     <Reference Include="$(BepInExDir)/BepInEx.Core.dll" />
     <Reference Include="$(BepInExDir)/BepInEx.Unity.IL2CPP.dll" />

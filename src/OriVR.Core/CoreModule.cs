@@ -12,9 +12,9 @@ public sealed class CoreModule : IModule
     {
         Log.Source = ctx.Log;
         Settings.Bind(ctx.Config);
-        stereo = new StereoController();
+        stereo = new StereoController(ctx.PluginDir);
         probe = new Probe(stereo);
-        Log.Info("F9 stereo on/off, F10 swap eyes, -/= separation, [/] convergence, F8 probe+capture, F7 reload core.");
+        Log.Info("F9 stereo on/off, F10 swap eyes, -/= separation, [/] convergence, F11 VR overlay (Shift+F11 recenter), F8 probe+capture, F7 reload core.");
     }
 
     public void Update()
