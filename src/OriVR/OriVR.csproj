@@ -23,5 +23,6 @@
     <Reference Include="$(InteropDir)/Il2Cppmscorlib.dll" />
     <Reference Include="$(InteropDir)/UnityEngine.dll" />
     <Reference Include="$(InteropDir)/UnityEngine.CoreModule.dll" />
+    <Reference Include="$(InteropDir)/UnityEngine.ImageConversionModule.dll" />
   </ItemGroup>
 </Project>

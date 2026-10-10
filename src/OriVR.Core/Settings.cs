@@ -20,9 +20,9 @@ public static class Settings
     {
         config = cfg;
         StereoEnabled = cfg.Bind("Stereo", "Enabled", false, "Render side-by-side stereo. Toggle in game with F9.");
-        Separation = cfg.Bind("Stereo", "Separation", 1.0f,
+        Separation = cfg.Bind("Stereo", "Separation", 0.8f,
             "Distance between the eyes in world units. Ori's playfield is about 29 units from the camera. Keys: - / =");
-        ConvergenceOffset = cfg.Bind("Stereo", "ConvergenceOffset", 0f,
+        ConvergenceOffset = cfg.Bind("Stereo", "ConvergenceOffset", -14f,
             "Zero-parallax depth relative to the playfield (z=0 plane). Positive pushes the screen plane further away. Keys: [ / ]");
         SwapEyes = cfg.Bind("Stereo", "SwapEyes", false, "Swap left/right images (cross-eyed viewing). Key: F10");
         EyeResolutionScale = cfg.Bind("Stereo", "EyeResolutionScale", 1.0f, "Per-eye render size relative to the game window.");

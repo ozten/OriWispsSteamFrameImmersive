@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace OriVR;
 
-/// Lives on the gameplay camera's GameObject so Unity calls it around every render of that camera.
+/// Attach to a camera's GameObject so Unity calls the core around every render of that camera.
 public class EyeHook : MonoBehaviour
 {
     public EyeHook(IntPtr ptr) : base(ptr) { }
@@ -12,18 +12,14 @@ public class EyeHook : MonoBehaviour
 
     private void OnPreCull()
     {
-        var s = StereoController.Instance;
-        if (s == null || s.Cam == null) return;
         cam ??= GetComponent<Camera>();
-        if (cam != s.Cam) return;
-        s.ApplyEye(cam);
+        try { Host.Module?.OnPreCull(cam); }
+        catch (Exception e) { Plugin.Logger.LogError($"OnPreCull: {e}"); }
     }
 
     private void OnPostRender()
     {
-        if (cam == null) return;
-        // Restore so game code reading the camera between frames sees normal matrices.
-        cam.ResetWorldToCameraMatrix();
-        cam.ResetProjectionMatrix();
+        try { Host.Module?.OnPostRender(cam); }
+        catch (Exception e) { Plugin.Logger.LogError($"OnPostRender: {e}"); }
     }
 }

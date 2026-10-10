@@ -1,45 +1,47 @@
 using System;
-using System.Collections;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
+using System.IO;
+using BepInEx;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace OriVR;
 
 /// Renders Ori's gameplay camera once per eye and shows the pair side by side in the window.
 ///
-/// Left eye: the game's own render of the main camera, redirected into leftEye (see EyeHook).
-/// Right eye: a second cam.Render() at end of frame into rightEye. Both use the same camera, so
+/// Left eye: the game's own render of the main camera, redirected into LeftEye.
+/// Right eye: a second cam.Render() at end of frame into RightEye. Both use the same camera, so
 /// all of Ori's post-processing components run for each eye.
 /// Eyes are offset via the view matrix (the camera transform is never moved) and use an
-/// off-axis projection so the two frusta converge on the playfield plane.
-public class StereoController : MonoBehaviour
+/// off-axis projection so the two frusta converge on the zero-parallax plane.
+public class StereoController
 {
-    public StereoController(IntPtr ptr) : base(ptr) { }
-
-    public static StereoController Instance;
-
     public Camera Cam { get; private set; }
     public RenderTexture LeftEye, RightEye;
-    /// -1 = left, +1 = right; read by EyeHook during the camera's callbacks.
-    public int CurrentEye = -1;
 
+    /// Set by F8 or by creating BepInEx/orivr-capture: save both eye images as PNGs at end of frame.
+    public bool CaptureRequested;
+
+    /// -1 = left, +1 = right; which eye the camera is currently rendering.
+    private int currentEye = -1;
     private float nextConfigCheck;
     private bool active;
+    private int captureCount;
 
-    private void Awake()
-    {
-        Instance = this;
-        StartCoroutine(EndOfFrameLoop().WrapToIl2Cpp());
-    }
+    private static string CaptureTrigger => Path.Combine(Paths.BepInExRootPath, "orivr-capture");
 
-    private void Update()
+    public void Update()
     {
         HandleKeys();
         if (Time.unscaledTime >= nextConfigCheck)
         {
             nextConfigCheck = Time.unscaledTime + 1f;
             if (Settings.ReloadIfChanged())
-                Plugin.Logger.LogInfo($"Config reloaded: {Describe()}");
+                Log.Info($"Config reloaded: {Describe()}");
+            if (File.Exists(CaptureTrigger))
+            {
+                File.Delete(CaptureTrigger);
+                CaptureRequested = true;
+            }
         }
 
         var main = Camera.main;
@@ -61,7 +63,7 @@ public class StereoController : MonoBehaviour
         else changed = false;
         if (!changed) return;
         Settings.Save();
-        Plugin.Logger.LogInfo(Describe());
+        Log.Info(Describe());
     }
 
     private static string Describe() =>
@@ -74,7 +76,7 @@ public class StereoController : MonoBehaviour
         EnsureTextures();
         cam.targetTexture = LeftEye;
         active = true;
-        Plugin.Logger.LogInfo($"Stereo ON for camera '{cam.name}' ({LeftEye.width}x{LeftEye.height} per eye). {Describe()}");
+        Log.Info($"Stereo ON for camera '{cam.name}' ({LeftEye.width}x{LeftEye.height} per eye). {Describe()}");
     }
 
     private void Deactivate()
@@ -88,7 +90,13 @@ public class StereoController : MonoBehaviour
             Cam.ResetProjectionMatrix();
         }
         Cam = null;
-        Plugin.Logger.LogInfo("Stereo OFF");
+        Log.Info("Stereo OFF");
+    }
+
+    public void Shutdown()
+    {
+        Deactivate();
+        if (LeftEye != null) { LeftEye.Release(); RightEye.Release(); LeftEye = RightEye = null; }
     }
 
     private void EnsureTextures()
@@ -114,10 +122,10 @@ public class StereoController : MonoBehaviour
     private float Convergence() =>
         Mathf.Max(1f, Mathf.Abs(Cam.transform.position.z) + Settings.ConvergenceOffset.Value);
 
-    /// Called by EyeHook.OnPreCull: apply the current eye's view and projection.
-    public void ApplyEye(Camera cam)
+    public void OnPreCull(Camera cam)
     {
-        var e = CurrentEye * Settings.Separation.Value * 0.5f;
+        if (!active || cam != Cam) return;
+        var e = currentEye * Settings.Separation.Value * 0.5f;
         cam.ResetWorldToCameraMatrix();
         cam.ResetProjectionMatrix();
         var view = cam.worldToCameraMatrix;
@@ -131,31 +139,63 @@ public class StereoController : MonoBehaviour
         cam.projectionMatrix = proj;
     }
 
-    private IEnumerator EndOfFrameLoop()
+    public void OnPostRender(Camera cam)
     {
-        var wait = new WaitForEndOfFrame();
-        while (true)
+        if (cam == null) return;
+        // Restore so game code reading the camera between frames sees normal matrices.
+        cam.ResetWorldToCameraMatrix();
+        cam.ResetProjectionMatrix();
+    }
+
+    public void EndOfFrame()
+    {
+        if (!active || Cam == null) return;
+        try
         {
-            yield return wait;
-            if (!active || Cam == null) continue;
-            try
+            // Right eye: second render of the same camera.
+            currentEye = 1;
+            Cam.targetTexture = RightEye;
+            Cam.Render();
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Right-eye render failed, disabling stereo: {ex}");
+            Settings.StereoEnabled.Value = false;
+        }
+        finally
+        {
+            currentEye = -1;
+            if (Cam != null) Cam.targetTexture = LeftEye;
+        }
+        if (CaptureRequested)
+        {
+            CaptureRequested = false;
+            Capture();
+        }
+        DrawSideBySide();
+    }
+
+    private void Capture()
+    {
+        try
+        {
+            captureCount++;
+            foreach (var (rt, eye) in new[] { (LeftEye, "left"), (RightEye, "right") })
             {
-                // Right eye: second render of the same camera.
-                CurrentEye = 1;
-                Cam.targetTexture = RightEye;
-                Cam.Render();
+                var tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+                RenderTexture.active = rt;
+                tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+                tex.Apply();
+                RenderTexture.active = null;
+                byte[] png = ImageConversion.EncodeToPNG(tex);
+                File.WriteAllBytes(Path.Combine(Paths.BepInExRootPath, $"orivr-capture-{captureCount:D2}-{eye}.png"), png);
+                Object.Destroy(tex);
             }
-            catch (Exception ex)
-            {
-                Plugin.Logger.LogError($"Right-eye render failed, disabling stereo: {ex}");
-                Settings.StereoEnabled.Value = false;
-            }
-            finally
-            {
-                CurrentEye = -1;
-                if (Cam != null) Cam.targetTexture = LeftEye;
-            }
-            DrawSideBySide();
+            Log.Info($"Captured eyes #{captureCount} ({Describe()})");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Capture failed: {ex}");
         }
     }
 
@@ -167,7 +207,7 @@ public class StereoController : MonoBehaviour
         float w = Screen.width, h = Screen.height;
         RenderTexture.active = null;
         GL.PushMatrix();
-        GL.LoadPixelMatrix(0, w, h, 0);
+        GL.LoadPixelMatrix(0, w, 0, h); // y-up; (0,w,h,0) came out upside down
         Graphics.DrawTexture(new Rect(0, 0, w / 2, h), leftImg);
         Graphics.DrawTexture(new Rect(w / 2, 0, w / 2, h), rightImg);
         GL.PopMatrix();

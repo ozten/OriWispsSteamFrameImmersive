@@ -5,19 +5,18 @@ using Il2CppInterop.Runtime.Injection;
 
 namespace OriVR;
 
-[BepInPlugin(Guid, "OriVR", "0.0.2")]
+[BepInPlugin(Guid, "OriVR", "0.0.3")]
 public class Plugin : BasePlugin
 {
     public const string Guid = "com.ozten.orivr";
     internal static ManualLogSource Logger;
+    internal static Plugin Instance;
 
     public override void Load()
     {
         Logger = Log;
-        Settings.Bind(Config);
+        Instance = this;
         ClassInjector.RegisterTypeInIl2Cpp<EyeHook>();
-        AddComponent<Probe>();
-        AddComponent<StereoController>();
-        Log.LogInfo("OriVR loaded. F9 stereo on/off, F10 swap eyes, -/= separation, [/] convergence, F8 probe.");
+        AddComponent<Host>();
     }
 }

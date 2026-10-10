@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Hot-reloadable part of the mod. Loaded from bytes by OriVR.dll (src/OriVR). -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>OriVR.Core</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>portable</DebugType>
+    <BepInExDir>$(MSBuildThisFileDirectory)../../vendor/bepinex/BepInEx/core</BepInExDir>
+    <InteropDir>$(MSBuildThisFileDirectory)../../build/interop</InteropDir>
+    <OutDir>$(MSBuildThisFileDirectory)../../build/plugins/</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Reference><Private>false</Private></Reference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="../OriVR/OriVR.csproj" Private="false" />
+    <Reference Include="$(BepInExDir)/BepInEx.Core.dll" />
+    <Reference Include="$(BepInExDir)/BepInEx.Unity.IL2CPP.dll" />
+    <Reference Include="$(BepInExDir)/Il2CppInterop.Runtime.dll" />
+    <Reference Include="$(BepInExDir)/Il2CppInterop.Common.dll" />
+    <Reference Include="$(InteropDir)/Il2Cppmscorlib.dll" />
+    <Reference Include="$(InteropDir)/UnityEngine.dll" />
+    <Reference Include="$(InteropDir)/UnityEngine.CoreModule.dll" />
+    <Reference Include="$(InteropDir)/UnityEngine.ImageConversionModule.dll" />
+  </ItemGroup>
+</Project>

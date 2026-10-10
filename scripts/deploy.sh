@@ -2,7 +2,8 @@
 # Install / uninstall the mod into the Ori game folder.
 #
 #   deploy.sh install     copy BepInEx + built plugins into the game folder
-#   deploy.sh plugins     re-copy only our built plugins (fast iteration)
+#   deploy.sh plugins     re-copy only our built plugins (game must be closed)
+#   deploy.sh hot         copy only OriVR.Core.* while the game runs; the host hot-reloads it
 #   deploy.sh uninstall   remove everything install added (game back to vanilla)
 #   deploy.sh status
 #
@@ -67,6 +68,14 @@ case "${1:-status}" in
     [ -f "$MANIFEST" ] || die "not installed; run: deploy.sh install"
     install_plugins
     ;;
+  hot)
+    [ -f "$MANIFEST" ] || die "not installed; run: deploy.sh install"
+    grep -qxF "BepInEx/plugins/OriVR.Core.dll" "$MANIFEST" || die "core not deployed yet; quit Ori and run: deploy.sh plugins"
+    # pdb first: the host reloads when the dll's timestamp changes.
+    cp -f "$BUILD_DIR/plugins/OriVR.Core.pdb" "$ORI_DIR/BepInEx/plugins/" 2>/dev/null || true
+    cp -f "$BUILD_DIR/plugins/OriVR.Core.dll" "$ORI_DIR/BepInEx/plugins/"
+    echo "Core hot-deployed."
+    ;;
   uninstall)
     ori_running && die "quit Ori first"
     [ -f "$MANIFEST" ] || { echo "Nothing to uninstall."; exit 0; }
@@ -90,5 +99,5 @@ case "${1:-status}" in
       echo "Not installed."
     fi
     ;;
-  *) die "usage: deploy.sh install|plugins|uninstall|status" ;;
+  *) die "usage: deploy.sh install|plugins|hot|uninstall|status" ;;
 esac

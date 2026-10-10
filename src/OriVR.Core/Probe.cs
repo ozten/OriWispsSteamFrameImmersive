@@ -11,18 +11,22 @@ namespace OriVR;
 
 /// Diagnostics: dumps every camera and the depth spread of visible renderers, so we can
 /// see how Ori's scene is layered. Runs on F8 and whenever the set of cameras changes.
-public class Probe : MonoBehaviour
+public class Probe
 {
-    public Probe(IntPtr ptr) : base(ptr) { }
+    private readonly StereoController stereo;
+    public Probe(StereoController stereo) => this.stereo = stereo;
 
     private string lastCameraSet = "";
     private float nextCheck;
     private int dumpCount;
 
-    private void Update()
+    public void Update()
     {
         if (Input.GetKeyDown(KeyCode.F8))
+        {
             Dump("F8");
+            stereo.CaptureRequested = true;
+        }
 
         if (Time.unscaledTime < nextCheck) return;
         nextCheck = Time.unscaledTime + 2f;
@@ -47,13 +51,13 @@ public class Probe : MonoBehaviour
             var main = Camera.main ?? cams.LastOrDefault(c => c.targetTexture == null);
             if (main != null) DescribeDepth(sb, main);
 
-            var path = Path.Combine(Paths.BepInExRootPath, $"orivr-probe-{dumpCount:D2}.txt");
+            var path = Path.Combine(BepInEx.Paths.BepInExRootPath, $"orivr-probe-{dumpCount:D2}.txt");
             File.WriteAllText(path, sb.ToString());
-            Plugin.Logger.LogInfo($"Probe #{dumpCount} ({reason}): {cams.Count} cameras -> {path}");
+            Log.Info($"Probe #{dumpCount} ({reason}): {cams.Count} cameras -> {path}");
         }
         catch (Exception e)
         {
-            Plugin.Logger.LogError($"Probe failed: {e}");
+            Log.Error($"Probe failed: {e}");
         }
     }
 
