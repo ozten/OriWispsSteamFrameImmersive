@@ -68,12 +68,17 @@ public class StereoController
     {
         var changed = true;
         if (Input.GetKeyDown(KeyCode.F9)) Settings.StereoEnabled.Value = !Settings.StereoEnabled.Value;
+        else if (Input.GetKeyDown(KeyCode.F10) && Shift) Settings.BlankWindowInVR.Value = !Settings.BlankWindowInVR.Value;
         else if (Input.GetKeyDown(KeyCode.F10)) Settings.SwapEyes.Value = !Settings.SwapEyes.Value;
+        else if (Input.GetKeyDown(KeyCode.PageUp)) Settings.OverlayWidth.Value *= 1.1f;
+        else if (Input.GetKeyDown(KeyCode.PageDown)) Settings.OverlayWidth.Value /= 1.1f;
+        else if (Input.GetKeyDown(KeyCode.Home)) Settings.OverlayDistance.Value = Mathf.Max(0.5f, Settings.OverlayDistance.Value - 0.25f);
+        else if (Input.GetKeyDown(KeyCode.End)) Settings.OverlayDistance.Value += 0.25f;
         else if (Input.GetKeyDown(KeyCode.Minus)) Settings.Separation.Value = Mathf.Max(0f, Settings.Separation.Value - 0.1f);
         else if (Input.GetKeyDown(KeyCode.Equals)) Settings.Separation.Value += 0.1f;
         else if (Input.GetKeyDown(KeyCode.LeftBracket)) Settings.ConvergenceOffset.Value -= 1f;
         else if (Input.GetKeyDown(KeyCode.RightBracket)) Settings.ConvergenceOffset.Value += 1f;
-        else if (Input.GetKeyDown(KeyCode.F11) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))) overlay.Recenter();
+        else if (Input.GetKeyDown(KeyCode.F11) && Shift) overlay.Recenter();
         else if (Input.GetKeyDown(KeyCode.F11)) Settings.OverlayEnabled.Value = !Settings.OverlayEnabled.Value;
         else changed = false;
         if (!changed) return;
@@ -81,8 +86,10 @@ public class StereoController
         Log.Info(Describe());
     }
 
+    private static bool Shift => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
     private static string Describe() =>
-        $"stereo={Settings.StereoEnabled.Value} sep={Settings.Separation.Value:F2} conv+={Settings.ConvergenceOffset.Value:F1} swap={Settings.SwapEyes.Value} scale={Settings.EyeResolutionScale.Value:F2} overlay={Settings.OverlayEnabled.Value}";
+        $"stereo={Settings.StereoEnabled.Value} sep={Settings.Separation.Value:F2} conv+={Settings.ConvergenceOffset.Value:F1} swap={Settings.SwapEyes.Value} scale={Settings.EyeResolutionScale.Value:F2} overlay={Settings.OverlayEnabled.Value} vr={Settings.OverlayWidth.Value:F2}m@{Settings.OverlayDistance.Value:F2}m blank={Settings.BlankWindowInVR.Value}";
 
     // Unity doesn't send OnPreCull/OnPostRender to Il2CppInterop-injected components (verified:
     // EyeHook never fired), so use the global camera callbacks instead.
@@ -158,10 +165,7 @@ public class StereoController
         return rt;
     }
 
-    /// Distance from the camera to the zero-parallax plane: the playfield (world z=0) plus offset.
-    private float Convergence() =>
-        Mathf.Max(1f, Mathf.Abs(Cam.transform.position.z) + Settings.ConvergenceOffset.Value);
-
+    private readonly FocusDepth focus = new();
     private bool loggedMatrices;
 
     /// Unity never invokes camera callbacks for us in this game (OnPreCull on injected
@@ -171,7 +175,13 @@ public class StereoController
     /// the convergence distance in the same place in both images.
     private void RenderRightEye()
     {
-        var sep = Settings.Separation.Value;
+        // Separation and screen-plane depth were tuned for gameplay framing (subject ~29 units
+        // away). Scale both with the current subject distance so zooms, cutscenes and the main
+        // menu keep the same on-screen disparity instead of exploding.
+        focus.Update(Cam);
+        var k = focus.Value / FocusDepth.Reference;
+        var sep = Settings.Separation.Value * k;
+        var convergence = Mathf.Max(0.5f, (FocusDepth.Reference + Settings.ConvergenceOffset.Value) * k);
         var view = Cam.worldToCameraMatrix;
         var proj = Cam.projectionMatrix;
         if (!loggedMatrices)
@@ -184,7 +194,7 @@ public class StereoController
         // Eye shifted by sep along camera right == shift view-space x by -sep.
         view.m03 -= sep;
         // ndc_x of a point at distance C gains m00*sep/C; cancel it so C is the screen plane.
-        proj.m02 -= proj.m00 * sep / Convergence();
+        proj.m02 -= proj.m00 * sep / convergence;
         Cam.worldToCameraMatrix = view;
         Cam.projectionMatrix = proj;
         Cam.targetTexture = RightEye;
@@ -237,12 +247,20 @@ public class StereoController
         {
             if (mono) overlay.Submit(LeftEye, LeftEye);
             else overlay.Submit(swap ? RightEye : LeftEye, swap ? LeftEye : RightEye);
-            DrawMono(); // the 3D image is in the headset; keep the flat window looking normal
+            // The 3D image is in the headset; the flat window shows a normal image, or black.
+            if (Settings.BlankWindowInVR.Value) DrawBlack();
+            else DrawMono();
         }
         else
         {
             DrawSideBySide(mono);
         }
+    }
+
+    private static void DrawBlack()
+    {
+        RenderTexture.active = null;
+        GL.Clear(true, true, Color.black);
     }
 
     private void DrawMono()

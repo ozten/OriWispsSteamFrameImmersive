@@ -16,6 +16,7 @@ public static class Settings
     public static ConfigEntry<bool> OverlayEnabled;
     public static ConfigEntry<float> OverlayWidth;
     public static ConfigEntry<float> OverlayDistance;
+    public static ConfigEntry<bool> BlankWindowInVR;
 
     private static ConfigFile config;
     private static System.DateTime lastWrite;
@@ -25,17 +26,19 @@ public static class Settings
         config = cfg;
         StereoEnabled = cfg.Bind("Stereo", "Enabled", false, "Render side-by-side stereo. Toggle in game with F9.");
         Separation = cfg.Bind("Stereo", "Separation", 0.8f,
-            "Distance between the eyes in world units. Ori's playfield is about 29 units from the camera. Keys: - / =");
+            "Distance between the eyes in world units at normal gameplay framing (Ori ~29 units away); scaled automatically when the camera zooms. Keys: - / =");
         ConvergenceOffset = cfg.Bind("Stereo", "ConvergenceOffset", -14f,
-            "Zero-parallax depth relative to the playfield (z=0 plane). Positive pushes the screen plane further away. Keys: [ / ]");
+            "Screen-plane depth relative to Ori at normal gameplay framing (negative = in front of Ori, so the scene sits behind the window); scaled with zoom. Keys: [ / ]");
         SwapEyes = cfg.Bind("Stereo", "SwapEyes", false, "Swap left/right images (cross-eyed viewing). Key: F10");
         MonoWhenPaused = cfg.Bind("Stereo", "MonoWhenPaused", true,
             "Show the same image to both eyes while the game is paused (menus sit close to the camera and don't fuse).");
         EyeResolutionScale = cfg.Bind("Stereo", "EyeResolutionScale", 1.0f, "Per-eye render size relative to the game window.");
         OverlayEnabled = cfg.Bind("VR", "OverlayEnabled", false,
             "Show the stereo pair in the headset as a floating SteamVR 3D window (needs Stereo.Enabled). Key: F11; Shift+F11 recenters.");
-        OverlayWidth = cfg.Bind("VR", "OverlayWidth", 2.5f, "Width of the floating window in meters.");
-        OverlayDistance = cfg.Bind("VR", "OverlayDistance", 2.5f, "Distance from your head in meters (applied on recenter).");
+        OverlayWidth = cfg.Bind("VR", "OverlayWidth", 2.5f, "Width of the floating window in meters. Keys: PageUp / PageDown");
+        OverlayDistance = cfg.Bind("VR", "OverlayDistance", 2.5f, "Distance from your head in meters. Keys: Home (closer) / End (further)");
+        BlankWindowInVR = cfg.Bind("VR", "BlankWindowInVR", false,
+            "While the VR window is up, show black in the normal game window (the Frame's own flat/theater screen). Key: Shift+F10");
         lastWrite = File.GetLastWriteTimeUtc(cfg.ConfigFilePath);
     }
 
