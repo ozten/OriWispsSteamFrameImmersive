@@ -14,7 +14,7 @@ public sealed class CoreModule : IModule
         Settings.Bind(ctx.Config);
         stereo = new StereoController(ctx.PluginDir);
         probe = new Probe(stereo);
-        Log.Info("F9 stereo on/off, F10 swap eyes, -/= separation, [/] convergence, F11 VR window (Shift+F11 recenter), PgUp/PgDn VR size, Home/End VR distance, Shift+F10 blank flat window, F8 probe+capture, F7 reload core.");
+        Log.Info("F9 stereo on/off, F10 swap eyes, -/= separation, [/] convergence, F11 VR window (Shift+F11 recenter, or re-show tab; Ctrl+F11 Window/Tab mode), PgUp/PgDn VR size, Home/End VR distance, Shift+F10 blank flat window, F8 probe+capture, F7 reload core.");
     }
 
     public void Update()

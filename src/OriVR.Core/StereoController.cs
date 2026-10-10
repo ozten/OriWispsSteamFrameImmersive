@@ -54,7 +54,9 @@ public class StereoController
         if (active) EnsureTextures();
 
         var wantOverlay = active && Settings.OverlayEnabled.Value;
+        if (wantOverlay && overlay.Running && overlay.Mode != Settings.VrMode.Value) overlay.Stop(); // mode switched
         if (wantOverlay && !overlay.Running && !overlayFailed) overlayFailed = !overlay.Start(pluginDir);
+        if (overlay.Running) overlay.Poll();
         if (!wantOverlay)
         {
             overlay.Hide();
@@ -78,6 +80,8 @@ public class StereoController
         else if (Input.GetKeyDown(KeyCode.Equals)) Settings.Separation.Value += 0.1f;
         else if (Input.GetKeyDown(KeyCode.LeftBracket)) Settings.ConvergenceOffset.Value -= 1f;
         else if (Input.GetKeyDown(KeyCode.RightBracket)) Settings.ConvergenceOffset.Value += 1f;
+        else if (Input.GetKeyDown(KeyCode.F11) && Ctrl)
+            Settings.VrMode.Value = Settings.VrMode.Value == "Tab" ? "Window" : "Tab";
         else if (Input.GetKeyDown(KeyCode.F11) && Shift) overlay.Recenter();
         else if (Input.GetKeyDown(KeyCode.F11)) Settings.OverlayEnabled.Value = !Settings.OverlayEnabled.Value;
         else changed = false;
@@ -86,10 +90,11 @@ public class StereoController
         Log.Info(Describe());
     }
 
+    private static bool Ctrl => Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
     private static bool Shift => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
     private static string Describe() =>
-        $"stereo={Settings.StereoEnabled.Value} sep={Settings.Separation.Value:F2} conv+={Settings.ConvergenceOffset.Value:F1} swap={Settings.SwapEyes.Value} scale={Settings.EyeResolutionScale.Value:F2} overlay={Settings.OverlayEnabled.Value} vr={Settings.OverlayWidth.Value:F2}m@{Settings.OverlayDistance.Value:F2}m blank={Settings.BlankWindowInVR.Value}";
+        $"stereo={Settings.StereoEnabled.Value} sep={Settings.Separation.Value:F2} conv+={Settings.ConvergenceOffset.Value:F1} swap={Settings.SwapEyes.Value} scale={Settings.EyeResolutionScale.Value:F2} overlay={Settings.OverlayEnabled.Value} mode={Settings.VrMode.Value} vr={Settings.OverlayWidth.Value:F2}m@{Settings.OverlayDistance.Value:F2}m blank={Settings.BlankWindowInVR.Value}";
 
     // Unity doesn't send OnPreCull/OnPostRender to Il2CppInterop-injected components (verified:
     // EyeHook never fired), so use the global camera callbacks instead.

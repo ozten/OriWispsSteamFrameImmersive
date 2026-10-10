@@ -12,9 +12,14 @@ namespace OriVR;
 public class VrOverlay
 {
     private const string Key = "com.ozten.orivr.overlay";
+    private const string TabKey = "com.ozten.orivr.tab";
     private static bool libraryLoaded;
 
-    private ulong handle;
+    private ulong handle, thumbHandle;
+
+    /// The mode ("Window" or "Tab") this overlay was created in.
+    public string Mode { get; private set; } = "";
+    private bool IsTab => Mode == "Tab";
     private RenderTexture sbs;
     private readonly TrackedDevicePose_t[] poses = new TrackedDevicePose_t[1];
     private float lastWidth, lastDistance;
@@ -30,7 +35,8 @@ public class VrOverlay
             Running = true;
             placed = false;
             ApplyLayout();
-            OpenVR.Overlay.ShowOverlay(handle);
+            if (IsTab) OpenVR.Overlay.ShowDashboard(TabKey);
+            else OpenVR.Overlay.ShowOverlay(handle);
             Log.Info("VR overlay shown.");
             return true;
         }
@@ -51,8 +57,21 @@ public class VrOverlay
                 return false;
             }
             var overlay = OpenVR.Overlay;
-            var oerr = overlay.CreateOverlay(Key, "Ori VR", ref handle);
-            if (oerr == EVROverlayError.KeyInUse) oerr = overlay.FindOverlay(Key, ref handle);
+            Mode = Settings.VrMode.Value == "Tab" ? "Tab" : "Window";
+            EVROverlayError oerr;
+            if (IsTab)
+            {
+                oerr = overlay.CreateDashboardOverlay(TabKey, "Ori 3D", ref handle, ref thumbHandle);
+                if (oerr == EVROverlayError.KeyInUse) oerr = overlay.FindOverlay(TabKey, ref handle);
+                var thumb = Path.Combine(pluginDir, "thumbnail.png");
+                if (oerr == EVROverlayError.None && thumbHandle != 0 && File.Exists(thumb))
+                    overlay.SetOverlayFromFile(thumbHandle, thumb);
+            }
+            else
+            {
+                oerr = overlay.CreateOverlay(Key, "Ori VR", ref handle);
+                if (oerr == EVROverlayError.KeyInUse) oerr = overlay.FindOverlay(Key, ref handle);
+            }
             if (oerr != EVROverlayError.None)
             {
                 Log.Error($"CreateOverlay failed: {oerr}");
@@ -60,13 +79,22 @@ public class VrOverlay
                 return false;
             }
             overlay.SetOverlayFlag(handle, VROverlayFlags.SideBySide_Parallel, true);
-            overlay.SetOverlaySortOrder(handle, 100);
+            if (!IsTab) overlay.SetOverlaySortOrder(handle, 100);
             initialized = true;
             Running = true;
             placed = false;
             ApplyLayout();
-            overlay.ShowOverlay(handle);
-            Log.Info("VR overlay started.");
+            if (IsTab)
+            {
+                overlay.ShowDashboard(TabKey);
+                uint flags = 0;
+                overlay.GetOverlayFlags(handle, ref flags);
+                Log.Info($"VR dashboard tab created: handle=0x{handle:X} thumb=0x{thumbHandle:X} flags=0x{flags:X} " +
+                         $"(SBS honoured={(flags & (uint)VROverlayFlags.SideBySide_Parallel) != 0}) dashboardDevice={overlay.GetPrimaryDashboardDevice()}");
+            }
+            else overlay.ShowOverlay(handle);
+            lastTabState = "";
+            Log.Info($"VR overlay started ({Mode}).");
             return true;
         }
         catch (Exception e)
@@ -81,6 +109,7 @@ public class VrOverlay
     public void Hide()
     {
         if (!Running) return;
+        if (IsTab) { Stop(); return; } // a dashboard tab can't be hidden; destroy it so the Frame's screen returns
         Running = false;
         try { OpenVR.Overlay?.HideOverlay(handle); }
         catch (Exception e) { Log.Error($"VR overlay hide: {e}"); }
@@ -99,7 +128,8 @@ public class VrOverlay
             OpenVR.Shutdown();
         }
         catch (Exception e) { Log.Error($"VR overlay stop: {e}"); }
-        handle = 0;
+        handle = thumbHandle = 0;
+        Mode = "";
         if (sbs != null) { sbs.Release(); sbs = null; }
         Log.Info("VR overlay stopped.");
     }
@@ -110,6 +140,12 @@ public class VrOverlay
     /// and remember that spot.
     public void Recenter()
     {
+        if (IsTab && initialized)
+        {
+            OpenVR.Overlay.ShowDashboard(TabKey);
+            Log.Info("VR dashboard tab re-shown.");
+            return;
+        }
         recenterRequested = true;
         placed = false;
     }
@@ -128,7 +164,7 @@ public class VrOverlay
             overlay.SetOverlayWidthInMeters(handle, width);
             lastWidth = width;
         }
-        if (placed && distance == lastDistance) return;
+        if (IsTab || (placed && distance == lastDistance)) return;
         lastDistance = distance;
 
         if (recenterRequested || !TryParseAnchor(Settings.OverlayAnchor.Value, out _, out _))
@@ -174,6 +210,25 @@ public class VrOverlay
         eye = new Vector3(v[0], v[1], v[2]);
         fwd = f.normalized;
         return true;
+    }
+
+    private string lastTabState = "";
+    private float nextPoll;
+
+    /// Spike diagnostics for Tab mode: log whenever the dashboard's visibility or our tab's active
+    /// state changes, so we can see whether the Frame keeps our tab up during play.
+    public void Poll()
+    {
+        if (!IsTab || Time.unscaledTime < nextPoll) return;
+        nextPoll = Time.unscaledTime + 0.5f;
+        var o = OpenVR.Overlay;
+        uint flags = 0;
+        o.GetOverlayFlags(handle, ref flags);
+        var state = $"dashboardVisible={o.IsDashboardVisible()} ourTabActive={o.IsActiveDashboardOverlay(handle)} " +
+                    $"overlayVisible={o.IsOverlayVisible(handle)} sbs={(flags & (uint)VROverlayFlags.SideBySide_Parallel) != 0}";
+        if (state == lastTabState) return;
+        lastTabState = state;
+        Log.Info($"VR tab state: {state}");
     }
 
     public void Submit(RenderTexture left, RenderTexture right)
