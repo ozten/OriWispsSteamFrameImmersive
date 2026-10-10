@@ -12,6 +12,7 @@ public static class Settings
     public static ConfigEntry<float> ConvergenceOffset;
     public static ConfigEntry<bool> SwapEyes;
     public static ConfigEntry<float> EyeResolutionScale;
+    public static ConfigEntry<bool> MonoWhenPaused;
     public static ConfigEntry<bool> OverlayEnabled;
     public static ConfigEntry<float> OverlayWidth;
     public static ConfigEntry<float> OverlayDistance;
@@ -28,6 +29,8 @@ public static class Settings
         ConvergenceOffset = cfg.Bind("Stereo", "ConvergenceOffset", -14f,
             "Zero-parallax depth relative to the playfield (z=0 plane). Positive pushes the screen plane further away. Keys: [ / ]");
         SwapEyes = cfg.Bind("Stereo", "SwapEyes", false, "Swap left/right images (cross-eyed viewing). Key: F10");
+        MonoWhenPaused = cfg.Bind("Stereo", "MonoWhenPaused", true,
+            "Show the same image to both eyes while the game is paused (menus sit close to the camera and don't fuse).");
         EyeResolutionScale = cfg.Bind("Stereo", "EyeResolutionScale", 1.0f, "Per-eye render size relative to the game window.");
         OverlayEnabled = cfg.Bind("VR", "OverlayEnabled", false,
             "Show the stereo pair in the headset as a floating SteamVR 3D window (needs Stereo.Enabled). Key: F11; Shift+F11 recenters.");

@@ -203,12 +203,24 @@ public class StereoController
     public void OnPreCull(Camera cam) { }
     public void OnPostRender(Camera cam) { }
 
+    private bool wasPaused;
+
+    /// Ori freezes time for its pause/exit menus.
+    private static bool Paused => Time.timeScale < 0.01f;
+
     public void EndOfFrame()
     {
         if (!active || Cam == null) return;
+        var paused = Paused;
+        if (paused != wasPaused)
+        {
+            wasPaused = paused;
+            Log.Info($"{(paused ? "Paused" : "Unpaused")} (timeScale={Time.timeScale}) cam pos={Cam.transform.position} fov={Cam.fieldOfView:F1}");
+        }
+        var mono = paused && Settings.MonoWhenPaused.Value;
         try
         {
-            RenderRightEye();
+            if (!mono) RenderRightEye();
         }
         catch (Exception ex)
         {
@@ -223,12 +235,13 @@ public class StereoController
         var swap = Settings.SwapEyes.Value;
         if (overlay.Running)
         {
-            overlay.Submit(swap ? RightEye : LeftEye, swap ? LeftEye : RightEye);
+            if (mono) overlay.Submit(LeftEye, LeftEye);
+            else overlay.Submit(swap ? RightEye : LeftEye, swap ? LeftEye : RightEye);
             DrawMono(); // the 3D image is in the headset; keep the flat window looking normal
         }
         else
         {
-            DrawSideBySide();
+            DrawSideBySide(mono);
         }
     }
 
@@ -266,11 +279,11 @@ public class StereoController
         }
     }
 
-    private void DrawSideBySide()
+    private void DrawSideBySide(bool mono)
     {
-        var swap = Settings.SwapEyes.Value;
+        var swap = Settings.SwapEyes.Value && !mono;
         var leftImg = swap ? RightEye : LeftEye;
-        var rightImg = swap ? LeftEye : RightEye;
+        var rightImg = mono ? LeftEye : swap ? LeftEye : RightEye;
         float w = Screen.width, h = Screen.height;
         RenderTexture.active = null;
         GL.PushMatrix();
