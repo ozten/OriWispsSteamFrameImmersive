@@ -104,8 +104,14 @@ public class VrOverlay
         Log.Info("VR overlay stopped.");
     }
 
+    private bool useHead;
+
     /// Re-place the overlay straight ahead of the headset (yaw only, so it stays upright).
-    public void Recenter() => placed = false;
+    public void Recenter()
+    {
+        useHead = true;
+        placed = false;
+    }
 
     private void ApplyLayout()
     {
@@ -121,16 +127,18 @@ public class VrOverlay
         if (placed && distance == lastDistance) return;
         lastDistance = distance;
 
+        // Default anchor: the play space's seated "forward" (independent of where the head happens
+        // to point when the overlay first appears). Shift+F11 re-anchors in front of the head.
         var hmdPos = new Vector3(0f, 1.6f, 0f);
         var fwd = new Vector3(0f, 0f, -1f);
         OpenVR.System?.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0f, poses);
-        if (poses[0].bPoseIsValid)
-        {
-            var m = poses[0].mDeviceToAbsoluteTracking;
-            hmdPos = new Vector3(m.m3, m.m7, m.m11);
-            var f = new Vector3(-m.m2, 0f, -m.m10); // HMD looks down its -Z
-            if (f.sqrMagnitude > 1e-4f) fwd = f.normalized;
-        }
+        var hmdValid = poses[0].bPoseIsValid;
+        var hm = poses[0].mDeviceToAbsoluteTracking;
+        if (hmdValid) hmdPos = new Vector3(hm.m3, hm.m7, hm.m11);
+        var anchor = useHead && hmdValid ? hm : OpenVR.System.GetSeatedZeroPoseToStandingAbsoluteTrackingPose();
+        var f = new Vector3(-anchor.m2, 0f, -anchor.m10); // poses look down their -Z
+        if (f.sqrMagnitude > 1e-4f) fwd = f.normalized;
+        if (!useHead) hmdPos = new Vector3(anchor.m3, hmdValid ? hm.m7 : anchor.m7, anchor.m11);
         var pos = hmdPos + fwd * distance;
         var z = -fwd;                            // overlay is seen from its +Z side
         var x = new Vector3(z.z, 0f, -z.x);      // up × z
@@ -142,7 +150,7 @@ public class VrOverlay
         };
         overlay.SetOverlayTransformAbsolute(handle, ETrackingUniverseOrigin.TrackingUniverseStanding, ref t);
         placed = true;
-        Log.Info($"VR overlay placed {distance:F1} m ahead, {width:F1} m wide.");
+        Log.Info($"VR overlay placed {distance:F1} m ahead of the {(useHead ? "headset" : "seated origin")}, {width:F1} m wide.");
     }
 
     public void Submit(RenderTexture left, RenderTexture right)

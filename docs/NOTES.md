@@ -37,3 +37,13 @@
 - The SBS-in-window prototype works: two renders per frame, no errors, stable while toggling. The first version drew upside down (fixed).
 - User-tuned comfortable values: separation 0.8, ConvergenceOffset -14 (screen plane about 15 units from the camera, so the scene sits behind the window). These are now the defaults.
 - Proton Experimental ARM64 vrclient supports IVROverlay_028 / IVRSystem_026, which matches OpenVR SDK v2.15.6 (used here).
+
+## 2026-10-09: How the Steam Frame shows a desktop game
+- Overlay handles look like (owner << 32) | globalIndex. A grid scan (256x96 handles) takes about 160 ms.
+- Ori's flat window is the SteamVR **dashboard tab** overlay `valve.steam.desktopgame.1057090` ("OriAndTheWilloftheWisps",
+  2.67 m wide), drawn by gamescope with a Subview layer `...layer1`. Dashboard tabs report no readable transform.
+- Subview overlays can only be created under parents from the same process, and OverlayRelative transforms are gone
+  in SDK 2.x, so our 3D overlay can't be pinned onto the game's tab. It is anchored to the seated origin instead
+  (Shift+F11 re-anchors in front of the head).
+- Camera callbacks never fire for us (OnPreCull on injected components, Camera.onPreCull/onPostRender),
+  so stereo is asymmetric: left = the game's render, right = manual Render() with the full separation.
