@@ -15,3 +15,9 @@
   The reloadable code must not register new Il2Cpp-injected types (the host owns the single injected MonoBehaviour).
 - Skip intro/title: a patch that skips logos and auto-continues the last save.
 - Launch/kill from the terminal: `steam steam://rungameid/1057090`, `pkill -f oriwotw.exe`, tail BepInEx/LogOutput.log.
+
+## 2026-10-09: BepInEx first launch under FEX
+- BepInEx be.788 crashed twice, about 10 s in, with `Fatal error. System.AccessViolationException` (BepInEx/ErrorLog.log).
+  It had downloaded unity-libs but `interop/` was empty, so it died during Cpp2IL/interop generation.
+- The same Cpp2IL + Il2CppInterop code running natively (linux-arm64 .NET 8) works: 94 dummy assemblies, 126 interop assemblies, about 30 s.
+  So the crash comes from emulation, not from the game's metadata. Worked around with tools/InteropGen + `UpdateInteropAssemblies = false`.

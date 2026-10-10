@@ -39,12 +39,26 @@ install_plugins() {
   fi
 }
 
+configure_bepinex() {
+  # Interop is pre-generated natively, so stop BepInEx regenerating it in-game (crashes under FEX).
+  local cfg="$ORI_DIR/BepInEx/config/BepInEx.cfg"
+  mkdir -p "$(dirname "$cfg")"
+  if grep -q '^UpdateInteropAssemblies' "$cfg" 2>/dev/null; then
+    sed -i 's/^UpdateInteropAssemblies = .*/UpdateInteropAssemblies = false/' "$cfg"
+  else
+    printf '[IL2CPP]\nUpdateInteropAssemblies = false\n' >> "$cfg"
+  fi
+}
+
 case "${1:-status}" in
   install)
     ori_running && die "quit Ori first"
     [ -f "$VENDOR_DIR/bepinex/winhttp.dll" ] || die "run scripts/fetch-bepinex.sh first"
     touch "$MANIFEST"
+    [ -d "$BUILD_DIR/interop" ] || die "run scripts/gen-interop.sh first"
     copy_tree "$VENDOR_DIR/bepinex" ""
+    copy_tree "$BUILD_DIR/interop" "BepInEx/interop"
+    configure_bepinex
     install_plugins
     echo "Installed. Enable with Steam launch option:  WINEDLLOVERRIDES=\"winhttp=n,b\" %command%"
     ;;

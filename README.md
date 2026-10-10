@@ -21,6 +21,7 @@ Frame-specific in principle.
 ```sh
 scripts/backup-saves.sh        # back up your saves first
 scripts/fetch-bepinex.sh       # download BepInEx 6 IL2CPP into vendor/
+scripts/gen-interop.sh         # generate interop assemblies natively (needs .NET 8 SDK)
 scripts/deploy.sh install      # copy into the game folder (tracked by a manifest)
 ```
 
@@ -33,11 +34,16 @@ WINEDLLOVERRIDES="winhttp=n,b" %command%
 **Turning it off:** clear the launch option (the game runs vanilla even with files
 present), or run `scripts/deploy.sh uninstall` to remove every file the mod added.
 
-The first launch with BepInEx is slow: it generates interop assemblies for the
-game. Later launches use the cache.
+Normally BepInEx generates interop assemblies on the first launch. Under FEX
+(x86 emulation on ARM) that crashed with an `AccessViolationException`, so
+`gen-interop.sh` runs the same Cpp2IL + Il2CppInterop steps natively (about 30 s)
+and `deploy.sh` sets `UpdateInteropAssemblies = false`. Re-run both after a game update.
+
+.NET 8 SDK without root: `curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0`
 
 ## Layout
 
-- `scripts/`: backup, fetch, deploy/uninstall
+- `scripts/`: backup, fetch, interop generation, deploy/uninstall
+- `tools/InteropGen/`: native interop generator (mirrors BepInEx's Il2CppInteropManager)
 - `src/`: plugin source (coming)
 - `docs/NOTES.md`: findings and environment notes
