@@ -17,6 +17,7 @@ public static class Settings
     public static ConfigEntry<float> OverlayWidth;
     public static ConfigEntry<float> OverlayDistance;
     public static ConfigEntry<bool> BlankWindowInVR;
+    public static ConfigEntry<string> OverlayAnchor;
 
     private static ConfigFile config;
     private static System.DateTime lastWrite;
@@ -37,6 +38,8 @@ public static class Settings
             "Show the stereo pair in the headset as a floating SteamVR 3D window (needs Stereo.Enabled). Key: F11; Shift+F11 recenters.");
         OverlayWidth = cfg.Bind("VR", "OverlayWidth", 2.5f, "Width of the floating window in meters. Keys: PageUp / PageDown");
         OverlayDistance = cfg.Bind("VR", "OverlayDistance", 2.5f, "Distance from your head in meters. Keys: Home (closer) / End (further)");
+        OverlayAnchor = cfg.Bind("VR", "OverlayAnchor", "",
+            "Saved viewer position and facing (x,y,z,forwardX,forwardZ) the VR window is placed relative to. Set by Shift+F11; clear it to re-anchor.");
         BlankWindowInVR = cfg.Bind("VR", "BlankWindowInVR", false,
             "While the VR window is up, show black in the normal game window (the Frame's own flat/theater screen). Key: Shift+F10");
         lastWrite = File.GetLastWriteTimeUtc(cfg.ConfigFilePath);
