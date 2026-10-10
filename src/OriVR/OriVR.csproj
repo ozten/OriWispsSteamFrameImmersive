@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>OriVR</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BepInExDir>$(MSBuildThisFileDirectory)../../vendor/bepinex/BepInEx/core</BepInExDir>
+    <InteropDir>$(MSBuildThisFileDirectory)../../build/interop</InteropDir>
+    <OutDir>$(MSBuildThisFileDirectory)../../build/plugins/</OutDir>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Reference><Private>false</Private></Reference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Reference Include="$(BepInExDir)/BepInEx.Core.dll" />
+    <Reference Include="$(BepInExDir)/BepInEx.Unity.IL2CPP.dll" />
+    <Reference Include="$(BepInExDir)/Il2CppInterop.Runtime.dll" />
+    <Reference Include="$(BepInExDir)/Il2CppInterop.Common.dll" />
+    <Reference Include="$(BepInExDir)/0Harmony.dll" />
+    <Reference Include="$(InteropDir)/Il2Cppmscorlib.dll" />
+    <Reference Include="$(InteropDir)/UnityEngine.dll" />
+    <Reference Include="$(InteropDir)/UnityEngine.CoreModule.dll" />
+  </ItemGroup>
+</Project>
