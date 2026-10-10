@@ -21,9 +21,20 @@ public class VrOverlay
     private bool placed;
 
     public bool Running { get; private set; }
+    private bool initialized;
 
     public bool Start(string pluginDir)
     {
+        if (initialized)
+        {
+            Running = true;
+            placed = false;
+            ApplyLayout();
+            OpenVR.Overlay.ShowOverlay(handle);
+            Log.Info("VR overlay shown.");
+            return true;
+        }
+        lastWidth = lastDistance = 0f; // force size/placement onto a newly created overlay
         try
         {
             if (!libraryLoaded)
@@ -50,6 +61,7 @@ public class VrOverlay
             }
             overlay.SetOverlayFlag(handle, VROverlayFlags.SideBySide_Parallel, true);
             overlay.SetOverlaySortOrder(handle, 100);
+            initialized = true;
             Running = true;
             placed = false;
             ApplyLayout();
@@ -64,10 +76,23 @@ public class VrOverlay
         }
     }
 
-    public void Stop()
+    /// Hide the overlay but keep the OpenVR connection (re-creating it on every toggle left
+    /// a stray, default-sized overlay behind).
+    public void Hide()
     {
         if (!Running) return;
         Running = false;
+        try { OpenVR.Overlay?.HideOverlay(handle); }
+        catch (Exception e) { Log.Error($"VR overlay hide: {e}"); }
+        Log.Info("VR overlay hidden.");
+    }
+
+    /// Full teardown (core unload / reload).
+    public void Stop()
+    {
+        Running = false;
+        if (!initialized) return;
+        initialized = false;
         try
         {
             OpenVR.Overlay?.DestroyOverlay(handle);

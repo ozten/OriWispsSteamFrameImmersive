@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using BepInEx;
+using Il2CppInterop.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -21,8 +22,6 @@ public class StereoController
     /// Set by F8 or by creating BepInEx/orivr-capture: save both eye images as PNGs at end of frame.
     public bool CaptureRequested;
 
-    /// -1 = left, +1 = right; which eye the camera is currently rendering.
-    private int currentEye = -1;
     private float nextConfigCheck;
     private bool active;
     private int captureCount;
@@ -58,7 +57,7 @@ public class StereoController
         if (wantOverlay && !overlay.Running && !overlayFailed) overlayFailed = !overlay.Start(pluginDir);
         if (!wantOverlay)
         {
-            overlay.Stop();
+            overlay.Hide();
             overlayFailed = false;
         }
     }
@@ -85,10 +84,33 @@ public class StereoController
     private static string Describe() =>
         $"stereo={Settings.StereoEnabled.Value} sep={Settings.Separation.Value:F2} conv+={Settings.ConvergenceOffset.Value:F1} swap={Settings.SwapEyes.Value} scale={Settings.EyeResolutionScale.Value:F2} overlay={Settings.OverlayEnabled.Value}";
 
+    // Unity doesn't send OnPreCull/OnPostRender to Il2CppInterop-injected components (verified:
+    // EyeHook never fired), so use the global camera callbacks instead.
+    private Camera.CameraCallback preCullCb, postRenderCb;
+
+    private void HookCallbacks()
+    {
+        if (preCullCb != null) return;
+        preCullCb = DelegateSupport.ConvertDelegate<Camera.CameraCallback>(new Action<Camera>(OnPreCull));
+        postRenderCb = DelegateSupport.ConvertDelegate<Camera.CameraCallback>(new Action<Camera>(OnPostRender));
+        Camera.onPreCull = Il2CppSystem.Delegate.Combine(Camera.onPreCull, preCullCb).Cast<Camera.CameraCallback>();
+        Camera.onPostRender = Il2CppSystem.Delegate.Combine(Camera.onPostRender, postRenderCb).Cast<Camera.CameraCallback>();
+    }
+
+    private void UnhookCallbacks()
+    {
+        if (preCullCb == null) return;
+        var pre = Il2CppSystem.Delegate.Remove(Camera.onPreCull, preCullCb);
+        Camera.onPreCull = pre == null ? null : pre.Cast<Camera.CameraCallback>();
+        var post = Il2CppSystem.Delegate.Remove(Camera.onPostRender, postRenderCb);
+        Camera.onPostRender = post == null ? null : post.Cast<Camera.CameraCallback>();
+        preCullCb = postRenderCb = null;
+    }
+
     private void Activate(Camera cam)
     {
         Cam = cam;
-        if (cam.gameObject.GetComponent<EyeHook>() == null) cam.gameObject.AddComponent<EyeHook>();
+        UnhookCallbacks();
         EnsureTextures();
         cam.targetTexture = LeftEye;
         active = true;
@@ -113,6 +135,7 @@ public class StereoController
     {
         overlay.Stop();
         Deactivate();
+        UnhookCallbacks();
         if (LeftEye != null) { LeftEye.Release(); RightEye.Release(); LeftEye = RightEye = null; }
     }
 
@@ -139,50 +162,58 @@ public class StereoController
     private float Convergence() =>
         Mathf.Max(1f, Mathf.Abs(Cam.transform.position.z) + Settings.ConvergenceOffset.Value);
 
-    public void OnPreCull(Camera cam)
+    private bool loggedMatrices;
+
+    /// Unity never invokes camera callbacks for us in this game (OnPreCull on injected
+    /// components and Camera.onPreCull both stay silent), so stereo is asymmetric:
+    /// left eye = the game's own, unmodified render; right eye = a second render offset by the
+    /// full separation, set up directly before cam.Render(). Off-axis projection keeps points at
+    /// the convergence distance in the same place in both images.
+    private void RenderRightEye()
     {
-        if (!active || cam != Cam) return;
-        var e = currentEye * Settings.Separation.Value * 0.5f;
-        cam.ResetWorldToCameraMatrix();
-        cam.ResetProjectionMatrix();
-        var view = cam.worldToCameraMatrix;
-        var proj = cam.projectionMatrix;
-        // Eye shifted by e along camera right == shift view-space x by -e.
-        view.m03 -= e;
-        // Off-axis: shift the image so points at the convergence distance land in the same place
-        // for both eyes (ndc_x gains m00*e/C).
-        proj.m02 -= proj.m00 * e / Convergence();
-        cam.worldToCameraMatrix = view;
-        cam.projectionMatrix = proj;
+        var sep = Settings.Separation.Value;
+        var view = Cam.worldToCameraMatrix;
+        var proj = Cam.projectionMatrix;
+        if (!loggedMatrices)
+        {
+            loggedMatrices = true;
+            var autoView = Matrix4x4.Scale(new Vector3(1, 1, -1)) * Cam.transform.worldToLocalMatrix;
+            var autoProj = Matrix4x4.Perspective(Cam.fieldOfView, Cam.aspect, Cam.nearClipPlane, Cam.farClipPlane);
+            Log.Info($"MATRICES game view:\n{view}\nauto view:\n{autoView}\ngame proj:\n{proj}\nauto proj:\n{autoProj}");
+        }
+        // Eye shifted by sep along camera right == shift view-space x by -sep.
+        view.m03 -= sep;
+        // ndc_x of a point at distance C gains m00*sep/C; cancel it so C is the screen plane.
+        proj.m02 -= proj.m00 * sep / Convergence();
+        Cam.worldToCameraMatrix = view;
+        Cam.projectionMatrix = proj;
+        Cam.targetTexture = RightEye;
+        try
+        {
+            Cam.Render();
+        }
+        finally
+        {
+            Cam.ResetWorldToCameraMatrix();
+            Cam.ResetProjectionMatrix();
+            Cam.targetTexture = LeftEye;
+        }
     }
 
-    public void OnPostRender(Camera cam)
-    {
-        if (cam == null) return;
-        // Restore so game code reading the camera between frames sees normal matrices.
-        cam.ResetWorldToCameraMatrix();
-        cam.ResetProjectionMatrix();
-    }
+    public void OnPreCull(Camera cam) { }
+    public void OnPostRender(Camera cam) { }
 
     public void EndOfFrame()
     {
         if (!active || Cam == null) return;
         try
         {
-            // Right eye: second render of the same camera.
-            currentEye = 1;
-            Cam.targetTexture = RightEye;
-            Cam.Render();
+            RenderRightEye();
         }
         catch (Exception ex)
         {
             Log.Error($"Right-eye render failed, disabling stereo: {ex}");
             Settings.StereoEnabled.Value = false;
-        }
-        finally
-        {
-            currentEye = -1;
-            if (Cam != null) Cam.targetTexture = LeftEye;
         }
         if (CaptureRequested)
         {

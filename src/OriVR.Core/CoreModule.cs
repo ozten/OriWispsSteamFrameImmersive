@@ -24,8 +24,9 @@ public sealed class CoreModule : IModule
     }
 
     public void EndOfFrame() => stereo.EndOfFrame();
-    public void OnPreCull(Camera cam) => stereo.OnPreCull(cam);
-    public void OnPostRender(Camera cam) => stereo.OnPostRender(cam);
+    // Camera callbacks come from Camera.onPreCull/onPostRender (see StereoController), not EyeHook.
+    public void OnPreCull(Camera cam) { }
+    public void OnPostRender(Camera cam) { }
     public void Shutdown() => stereo.Shutdown();
 }
 
