@@ -1,0 +1,29 @@
+# OriVR probe #8 (F8) t=138.3s screen=1280x720
+## 1 active cameras (Camera.main = camera)
+- systems/cameraSystem/camera
+    depth=0 ortho=False fov=45.01 orthoSize=100.00 near=0.3 far=5000
+    pos=(-407.4, -4419.9, -28.6) rot=(0.0, 0.0, 0.0) clear=SolidColor rect=(x:0.00, y:0.00, width:1.00, height:1.00) hdr=True
+    target=screen stereoTarget=Both
+    cullingMask=Default|TransparentFX|Ignore Raycast|3|Water|6|7|ui|player|solids|art|character|characterMovement|worldMap|items|killCharacter|killEverything|pushPullBlock|platform|resampleBuffer|characterMovementIgnorePlatforms|artReflected|debris|debrisNoCollsion|artBlurred|projectile|earlyZ|artBlurredReflected|worldMap|laser|terrainCollisionIgnorePlayerAndEnemies
+    components=Transform, Camera, Behaviour, AudioListener, UberPostProcess, VSyncToggler, TurbulenceManager, UberInteractionManager, EnvironmentLightingManager, UberPostProcessingCrossFade, MaintainAspectRatio, DynamicLightsManager, ChromaticAberration, ContrastVignette, AntiAliasing, FpsGraph, CameraPositionTracker, SpiritLightVisualAffectorManager, FrameGraph, FrameCounter, SceneInspector, NanoProfiler, MicroProfilerGraph, FrameCounter, DebugHub, SlicedRenderSettingsEditor, SimpleFPS, MemoryOverlay, ExceptionsDebugText
+## Visible renderers relative to 'camera': 637 of 2726
+    z min=8.61 median=30.37 max=628.59
+### depth histogram (view-space distance)
+    5-10             1  e.g. bootstrapGlow (11)
+    10-20            3  e.g. kwolokMossPatchA, sunkenGladesDryCeilingLichenD, swampGrassС
+    20-40          409  e.g. desertGrassG, swampFernC, kwolokMushroomD
+    40-80          169  e.g. vignetteMaskC, kwolokTreeB, swampBackgroundRockH
+    80-160          51  e.g. earlyZMesh-regular-cell[8,6,1]-0, thornfeltSwampBackgroundTreeA, swampHangingMossD
+    160-500          2  e.g. earlyZMesh-regular-big-swampBackgroundPlaneA, swampBackgroundPlaneA
+    500+             2  e.g. radialGlow (1), light
+### by layer
+    art                        373  z 8.6..628.6
+    artBlurred                 177  z 46.2..221.5
+    ui                          52  z 28.0..29.6
+    earlyZ                      34  z 28.3..221.5
+    character                    1  z 28.6..28.6
+### by render queue (>=3000 = transparent)
+        -1     2
+         1    34
+      2000   585
+      3000    16

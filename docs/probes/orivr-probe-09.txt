@@ -1,0 +1,33 @@
+# OriVR probe #9 (F8) t=153.6s screen=1280x720
+## 1 active cameras (Camera.main = camera)
+- systems/cameraSystem/camera
+    depth=0 ortho=False fov=45.91 orthoSize=100.00 near=0.3 far=5000
+    pos=(-416.6, -4436.7, -30.0) rot=(0.0, 0.0, 0.0) clear=SolidColor rect=(x:0.00, y:0.00, width:1.00, height:1.00) hdr=True
+    target=screen stereoTarget=Both
+    cullingMask=Default|TransparentFX|Ignore Raycast|3|Water|6|7|ui|player|solids|art|character|characterMovement|worldMap|items|killCharacter|killEverything|pushPullBlock|platform|resampleBuffer|characterMovementIgnorePlatforms|artReflected|debris|debrisNoCollsion|artBlurred|projectile|earlyZ|artBlurredReflected|worldMap|laser|terrainCollisionIgnorePlayerAndEnemies
+    components=Transform, Camera, Behaviour, AudioListener, UberPostProcess, VSyncToggler, TurbulenceManager, UberInteractionManager, EnvironmentLightingManager, UberPostProcessingCrossFade, MaintainAspectRatio, DynamicLightsManager, ChromaticAberration, ContrastVignette, AntiAliasing, FpsGraph, CameraPositionTracker, SpiritLightVisualAffectorManager, FrameGraph, FrameCounter, SceneInspector, NanoProfiler, MicroProfilerGraph, FrameCounter, DebugHub, SlicedRenderSettingsEditor, SimpleFPS, MemoryOverlay, ExceptionsDebugText
+## Visible renderers relative to 'camera': 666 of 2896
+    z min=10.05 median=32.81 max=630.04
+### depth histogram (view-space distance)
+    10-20            3  e.g. bootstrapGlow (11), kwolokWoodGroundBridgeB, sunkenGladesDryGrassA
+    20-40          433  e.g. swampBackgroundRuinsRockA, mistyWoodsTreeBranchA, spiritTreeRightBranchD
+    40-80          164  e.g. swampBackgroundRuinsRockPieceI, earlyZMesh-regular-cell[7,8,0]-0, swampCeilingHangingMossB
+    80-160          62  e.g. otterHutBRight, otterHutD, swampBackgroundRockL
+    160-500          2  e.g. earlyZMesh-regular-big-swampBackgroundPlaneA, swampBackgroundPlaneA
+    500+             2  e.g. radialGlow (1), light
+### by layer
+    art                        395  z 10.0..630.0
+    artBlurred                 166  z 47.6..222.9
+    ui                          52  z 29.4..31.0
+    earlyZ                      43  z 29.2..222.9
+    solids                       4  z 29.9..30.8
+    Water                        2  z 36.6..38.2
+    character                    1  z 30.2..30.2
+    Default                      1  z 29.8..29.8
+    items                        1  z 30.7..30.7
+    characterMovement            1  z 30.0..30.0
+### by render queue (>=3000 = transparent)
+        -1     2
+         1    43
+      2000   601
+      3000    20

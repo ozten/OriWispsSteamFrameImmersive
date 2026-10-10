@@ -1,0 +1,30 @@
+# OriVR probe #7 (F8) t=126.3s screen=1280x720
+## 1 active cameras (Camera.main = camera)
+- systems/cameraSystem/camera
+    depth=0 ortho=False fov=46.97 orthoSize=100.00 near=0.3 far=5000
+    pos=(-423.4, -4406.0, -27.6) rot=(0.0, 0.0, 0.0) clear=SolidColor rect=(x:0.00, y:0.00, width:1.00, height:1.00) hdr=True
+    target=screen stereoTarget=Both
+    cullingMask=Default|TransparentFX|Ignore Raycast|3|Water|6|7|ui|player|solids|art|character|characterMovement|worldMap|items|killCharacter|killEverything|pushPullBlock|platform|resampleBuffer|characterMovementIgnorePlatforms|artReflected|debris|debrisNoCollsion|artBlurred|projectile|earlyZ|artBlurredReflected|worldMap|laser|terrainCollisionIgnorePlayerAndEnemies
+    components=Transform, Camera, Behaviour, AudioListener, UberPostProcess, VSyncToggler, TurbulenceManager, UberInteractionManager, EnvironmentLightingManager, UberPostProcessingCrossFade, MaintainAspectRatio, DynamicLightsManager, ChromaticAberration, ContrastVignette, AntiAliasing, FpsGraph, CameraPositionTracker, SpiritLightVisualAffectorManager, FrameGraph, FrameCounter, SceneInspector, NanoProfiler, MicroProfilerGraph, FrameCounter, DebugHub, SlicedRenderSettingsEditor, SimpleFPS, MemoryOverlay, ExceptionsDebugText
+## Visible renderers relative to 'camera': 528 of 2777
+    z min=5.05 median=29.46 max=627.60
+### depth histogram (view-space distance)
+    5-10             2  e.g. vignetteMaskC, bootstrapGlow (11)
+    10-20           22  e.g. sharedFogB (12), kwolokMossPatchA, kwolokHanginBranchC
+    20-40          334  e.g. glow (39), BushA, sunkenGladesDryCeilingLichenG
+    40-80          146  e.g. glow (36), kwolokHanginBranchD, swampBackgroundRockB
+    80-160          20  e.g. bootstrapGlow (16), sharedFogB (19), swampBackgroundRuinsRockPieceC
+    160-500          2  e.g. earlyZMesh-regular-big-swampBackgroundPlaneA, swampBackgroundPlaneA
+    500+             2  e.g. radialGlow (1), light
+### by layer
+    art                        297  z 5.1..627.6
+    artBlurred                 134  z 45.2..220.5
+    ui                          65  z 17.4..67.6
+    earlyZ                      29  z 29.1..220.5
+    solids                       2  z 27.8..27.8
+    character                    1  z 27.6..27.6
+### by render queue (>=3000 = transparent)
+        -1     2
+         1    29
+      2000   488
+      3000     9
