@@ -1,0 +1,30 @@
+# OriVR probe #5 (F8) t=95.9s screen=1280x720
+## 1 active cameras (Camera.main = camera)
+- systems/cameraSystem/camera
+    depth=0 ortho=False fov=45.00 orthoSize=100.00 near=0.3 far=5000
+    pos=(-491.2, -4410.0, -29.0) rot=(0.0, 0.0, 0.0) clear=SolidColor rect=(x:0.00, y:0.00, width:1.00, height:1.00) hdr=True
+    target=screen stereoTarget=Both
+    cullingMask=Default|TransparentFX|Ignore Raycast|3|Water|6|7|ui|player|solids|art|character|characterMovement|worldMap|items|killCharacter|killEverything|pushPullBlock|platform|resampleBuffer|characterMovementIgnorePlatforms|artReflected|debris|debrisNoCollsion|artBlurred|projectile|earlyZ|artBlurredReflected|worldMap|laser|terrainCollisionIgnorePlayerAndEnemies
+    components=Transform, Camera, Behaviour, AudioListener, UberPostProcess, VSyncToggler, TurbulenceManager, UberInteractionManager, EnvironmentLightingManager, UberPostProcessingCrossFade, MaintainAspectRatio, DynamicLightsManager, ChromaticAberration, ContrastVignette, AntiAliasing, FpsGraph, CameraPositionTracker, SpiritLightVisualAffectorManager, FrameGraph, FrameCounter, SceneInspector, NanoProfiler, MicroProfilerGraph, FrameCounter, DebugHub, SlicedRenderSettingsEditor, SimpleFPS, MemoryOverlay, ExceptionsDebugText
+## Visible renderers relative to 'camera': 364 of 1541
+    z min=-32.55 median=29.00 max=221.91
+### depth histogram (view-space distance)
+    behind           1  e.g. vignetteMaskC
+    10-20            9  e.g. swampGroundWoodRootsB, kwolokThinBranchB, kwolokStumpPlantC
+    20-40          279  e.g. swampGroundWoodLogC, vignetteMaskC, swampGroundWoodRootsC
+    40-80           71  e.g. earlyZMesh-regular-cell[8,7,0]-0, earlyZMesh-regular-cell[8,8,0]-0, swampBackgroundRuinsRockPieceI
+    80-160           2  e.g. thornfeltSwampBackgroundTreeA, earlyZMesh-regular-cell[10,7,2]-0
+    160-500          2  e.g. earlyZMesh-regular-big-swampBackgroundPlaneA, swampBackgroundPlaneA
+### by layer
+    art                        238  z 17.4..45.8
+    ui                          52  z 28.4..30.0
+    artBlurred                  50  z -32.5..221.9
+    earlyZ                      20  z 25.4..221.9
+    solids                       2  z 29.2..30.2
+    character                    1  z 29.0..29.0
+    Water                        1  z 35.4..35.4
+### by render queue (>=3000 = transparent)
+        -1     2
+         1    20
+      2000   333
+      3000     9

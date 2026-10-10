@@ -21,3 +21,14 @@
   It had downloaded unity-libs but `interop/` was empty, so it died during Cpp2IL/interop generation.
 - The same Cpp2IL + Il2CppInterop code running natively (linux-arm64 .NET 8) works: 94 dummy assemblies, 126 interop assemblies, about 30 s.
   So the crash comes from emulation, not from the game's metadata. Worked around with tools/InteropGen + `UpdateInteropAssemblies = false`.
+
+## 2026-10-09: Camera probe (docs/probes/)
+- BepInEx + plugin load fine under FEX once interop is pre-generated.
+- Gameplay uses ONE camera, `systems/cameraSystem/camera`: **perspective**, fov 45, near 0.3, far 5000, HDR, at z = -29.
+  Post effects are components on it: UberPostProcess, ChromaticAberration, ContrastVignette, AntiAliasing, etc.
+- Ori (`character` layer) sits at view depth 29.0. Art spans 17–46, `artBlurred`/`earlyZ` background goes out to about 220,
+  and blurred foreground goes to -32 (behind the camera / very close). **Real 3D layering, so true stereo works.**
+- The HUD (`ui` layer) is world-space geometry at depth 28.4–30, so it sits in the playfield plane and is drawn by the same camera.
+  With convergence at the playfield (about 29) the HUD lands at screen depth for free.
+- Most renderers are queue 2000 (only about 9 transparent at 3000).
+- Window: 1280x720. The boot splash uses a separate ortho camera.

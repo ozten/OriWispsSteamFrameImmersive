@@ -1,0 +1,9 @@
+# OriVR probe #1 (camera set changed) t=0.3s screen=1280x720
+## 1 active cameras (Camera.main = camera)
+- *unsorted/loadingBootstrapSplashRoot/camera
+    depth=0 ortho=True fov=60.00 orthoSize=5.00 near=0.3 far=1000
+    pos=(0.0, 0.0, -10.0) rot=(0.0, 0.0, 0.0) clear=SolidColor rect=(x:0.00, y:0.00, width:1.00, height:1.00) hdr=False
+    target=screen stereoTarget=Both
+    cullingMask=Everything
+    components=Transform, Camera
+## Visible renderers relative to 'camera': 0 of 11
