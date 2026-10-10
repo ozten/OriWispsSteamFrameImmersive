@@ -28,7 +28,7 @@ public class VrOverlay
         if (initialized)
         {
             Running = true;
-            placed = false;
+            Recenter();
             ApplyLayout();
             OpenVR.Overlay.ShowOverlay(handle);
             Log.Info("VR overlay shown.");
@@ -63,7 +63,7 @@ public class VrOverlay
             overlay.SetOverlaySortOrder(handle, 100);
             initialized = true;
             Running = true;
-            placed = false;
+            Recenter();
             ApplyLayout();
             overlay.ShowOverlay(handle);
             Log.Info("VR overlay started.");
@@ -127,8 +127,9 @@ public class VrOverlay
         if (placed && distance == lastDistance) return;
         lastDistance = distance;
 
-        // Default anchor: the play space's seated "forward" (independent of where the head happens
-        // to point when the overlay first appears). Shift+F11 re-anchors in front of the head.
+        // The window appears straight ahead of wherever you look when it is shown (F9/F11) or
+        // recentered (Shift+F11). The seated origin turned out to be unreliable on the Frame
+        // (after a reboot the overlay landed out of view), so it is only a fallback.
         var hmdPos = new Vector3(0f, 1.6f, 0f);
         var fwd = new Vector3(0f, 0f, -1f);
         OpenVR.System?.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0f, poses);
@@ -150,7 +151,9 @@ public class VrOverlay
         };
         overlay.SetOverlayTransformAbsolute(handle, ETrackingUniverseOrigin.TrackingUniverseStanding, ref t);
         placed = true;
-        Log.Info($"VR overlay placed {distance:F1} m ahead of the {(useHead ? "headset" : "seated origin")}, {width:F1} m wide.");
+        var seat = OpenVR.System.GetSeatedZeroPoseToStandingAbsoluteTrackingPose();
+        Log.Info($"VR overlay placed {distance:F1} m ahead of the {(useHead && hmdValid ? "headset" : "seated origin")}, {width:F1} m wide, at {pos}. " +
+                 $"hmd valid={hmdValid} pos=({hm.m3:F2},{hm.m7:F2},{hm.m11:F2}) seated=({seat.m3:F2},{seat.m7:F2},{seat.m11:F2}) seatedFwd=({-seat.m2:F2},{-seat.m10:F2})");
     }
 
     public void Submit(RenderTexture left, RenderTexture right)
