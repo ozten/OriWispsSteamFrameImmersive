@@ -47,6 +47,16 @@ size, distance, curvature, recentering, environment.
   with compositor reprojection covering the gaps.
 - Cost: medium. We need our own quad rendering + Submit loop. It's also the path that works the same on
   PC SteamVR.
+- **Spike result (2026-10-10): display works, input doesn't yet.** `[VR] Mode = Scene` calls
+  `VR_Init(Scene)` from the game, keeps our SBS overlay as the window and submits a black frame per eye
+  after `WaitGetPoses`. On the Frame the gamescope screen **disappears**: only our 3D window is left,
+  the dashboard lists the game as "Now Playing" (named `wine-preloader`, since it isn't identified as
+  app 1057090), and screenshots are filed under the game's app ID instead of SteamVR's. But the
+  controllers now act as VR controllers for the scene app ("VR Controller Bindings"), so the
+  desktop-game gamepad emulation no longer reaches Ori. Next: an input bridge. Ori reads the pad through
+  `J2i.Net.XInputWrapper` (`XboxController.UpdateState` → `XInputGetState` → `gamepadStateCurrent`),
+  so a Harmony postfix can overwrite that state from OpenVR controller input. Also identify the
+  process as `steam.app.1057090`.
 
 ### C. Upstream: stereo support in gamescope's OpenVR backend
 Patch gamescope so a window property (e.g. `GAMESCOPE_VR_STEREO=sbs`) sets `SideBySide_Parallel` on its

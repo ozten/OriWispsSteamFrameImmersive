@@ -41,9 +41,15 @@ public static class Settings
         OverlayDistance = cfg.Bind("VR", "OverlayDistance", 2.5f, "Distance from your head in meters. Keys: Home (closer) / End (further)");
         OverlayAnchor = cfg.Bind("VR", "OverlayAnchor", "",
             "Saved viewer position and facing (x,y,z,forwardX,forwardZ) the VR window is placed relative to. Set by Shift+F11; clear it to re-anchor.");
+        // BepInEx keeps an entry's first definition (including its allowed values) for the life of
+        // the game, so drop it first: otherwise a hot-reloaded core can't add new modes.
+        var modeDef = new ConfigDefinition("VR", "Mode");
+        var oldMode = cfg.ContainsKey(modeDef) ? cfg[modeDef].BoxedValue as string : null;
+        cfg.Remove(modeDef);
         VrMode = cfg.Bind("VR", "Mode", "Window",
             new ConfigDescription("Window = floating 3D window placed by the mod. Scene = experimental: the game becomes a full VR app (replacing the Frame's flat screen) and shows the same 3D window in an empty scene. Tab = experimental: our own SteamVR dashboard tab in 3D, replacing the Frame's flat game screen. Key: Ctrl+F11",
                 new AcceptableValueList<string>("Window", "Scene", "Tab")));
+        if (oldMode != null) VrMode.Value = oldMode;
         BlankWindowInVR = cfg.Bind("VR", "BlankWindowInVR", false,
             "While the VR window is up, show black in the normal game window (the Frame's own flat/theater screen). Key: Shift+F10");
         lastWrite = File.GetLastWriteTimeUtc(cfg.ConfigFilePath);
