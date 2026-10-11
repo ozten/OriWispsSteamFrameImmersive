@@ -42,8 +42,8 @@ public static class Settings
         OverlayAnchor = cfg.Bind("VR", "OverlayAnchor", "",
             "Saved viewer position and facing (x,y,z,forwardX,forwardZ) the VR window is placed relative to. Set by Shift+F11; clear it to re-anchor.");
         VrMode = cfg.Bind("VR", "Mode", "Window",
-            new ConfigDescription("Window = floating 3D window placed by the mod. Tab = experimental: our own SteamVR dashboard tab in 3D, replacing the Frame's flat game screen. Key: Ctrl+F11",
-                new AcceptableValueList<string>("Window", "Tab")));
+            new ConfigDescription("Window = floating 3D window placed by the mod. Scene = experimental: the game becomes a full VR app (replacing the Frame's flat screen) and shows the same 3D window in an empty scene. Tab = experimental: our own SteamVR dashboard tab in 3D, replacing the Frame's flat game screen. Key: Ctrl+F11",
+                new AcceptableValueList<string>("Window", "Scene", "Tab")));
         BlankWindowInVR = cfg.Bind("VR", "BlankWindowInVR", false,
             "While the VR window is up, show black in the normal game window (the Frame's own flat/theater screen). Key: Shift+F10");
         lastWrite = File.GetLastWriteTimeUtc(cfg.ConfigFilePath);

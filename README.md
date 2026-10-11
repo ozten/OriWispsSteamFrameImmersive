@@ -15,7 +15,7 @@ Frame-specific in principle.
 |---|---|
 | F9 | Stereo on/off |
 | F11 | Show the 3D image in the headset (SteamVR overlay); Shift+F11 recenters it (Tab mode: re-shows the tab) |
-| Ctrl+F11 | Switch VR mode: floating Window or experimental dashboard Tab |
+| Ctrl+F11 | Switch VR mode: floating Window or experimental Scene (game becomes a full VR app) |
 | F10 | Swap eyes |
 | `-` / `=` | Eye separation |
 | `[` / `]` | Zero-parallax (screen) depth |

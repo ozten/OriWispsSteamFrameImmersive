@@ -81,7 +81,7 @@ public class StereoController
         else if (Input.GetKeyDown(KeyCode.LeftBracket)) Settings.ConvergenceOffset.Value -= 1f;
         else if (Input.GetKeyDown(KeyCode.RightBracket)) Settings.ConvergenceOffset.Value += 1f;
         else if (Input.GetKeyDown(KeyCode.F11) && Ctrl)
-            Settings.VrMode.Value = Settings.VrMode.Value == "Tab" ? "Window" : "Tab";
+            Settings.VrMode.Value = Settings.VrMode.Value == "Window" ? "Scene" : "Window";
         else if (Input.GetKeyDown(KeyCode.F11) && Shift) overlay.Recenter();
         else if (Input.GetKeyDown(KeyCode.F11)) Settings.OverlayEnabled.Value = !Settings.OverlayEnabled.Value;
         else changed = false;

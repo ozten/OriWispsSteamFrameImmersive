@@ -20,6 +20,11 @@ public class VrOverlay
     /// The mode ("Window" or "Tab") this overlay was created in.
     public string Mode { get; private set; } = "";
     private bool IsTab => Mode == "Tab";
+    private bool IsScene => Mode == "Scene";
+    private RenderTexture sceneTex;
+    private readonly TrackedDevicePose_t[] renderPoses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
+    private readonly TrackedDevicePose_t[] gamePoses = new TrackedDevicePose_t[0];
+    private bool sceneErrorLogged;
     private RenderTexture sbs;
     private readonly TrackedDevicePose_t[] poses = new TrackedDevicePose_t[1];
     private float lastWidth, lastDistance;
@@ -50,14 +55,27 @@ public class VrOverlay
                 libraryLoaded = true;
             }
             var err = EVRInitError.None;
-            OpenVR.Init(ref err, EVRApplicationType.VRApplication_Overlay);
+            Mode = Settings.VrMode.Value is "Tab" or "Scene" ? Settings.VrMode.Value : "Window";
+            OpenVR.Init(ref err, IsScene ? EVRApplicationType.VRApplication_Scene : EVRApplicationType.VRApplication_Overlay);
             if (err != EVRInitError.None)
             {
                 Log.Error($"OpenVR init failed: {err}");
                 return false;
             }
+            if (IsScene)
+            {
+                if (OpenVR.Compositor == null)
+                {
+                    Log.Error("OpenVR compositor unavailable for Scene mode.");
+                    OpenVR.Shutdown();
+                    Mode = "";
+                    return false;
+                }
+                OpenVR.Compositor.SetTrackingSpace(ETrackingUniverseOrigin.TrackingUniverseStanding);
+                sceneErrorLogged = false;
+                Log.Info($"OpenVR scene app: canRender={OpenVR.Compositor.CanRenderScene()}");
+            }
             var overlay = OpenVR.Overlay;
-            Mode = Settings.VrMode.Value == "Tab" ? "Tab" : "Window";
             EVROverlayError oerr;
             if (IsTab)
             {
@@ -129,6 +147,7 @@ public class VrOverlay
         }
         catch (Exception e) { Log.Error($"VR overlay stop: {e}"); }
         handle = thumbHandle = 0;
+        if (sceneTex != null) { sceneTex.Release(); sceneTex = null; }
         Mode = "";
         if (sbs != null) { sbs.Release(); sbs = null; }
         Log.Info("VR overlay stopped.");
@@ -219,9 +238,19 @@ public class VrOverlay
     /// state changes, so we can see whether the Frame keeps our tab up during play.
     public void Poll()
     {
-        if (!IsTab || Time.unscaledTime < nextPoll) return;
+        if (!(IsTab || IsScene) || Time.unscaledTime < nextPoll) return;
         nextPoll = Time.unscaledTime + 0.5f;
         var o = OpenVR.Overlay;
+        if (IsScene)
+        {
+            var sc = OpenVR.Compositor;
+            var st = $"dashboardVisible={o.IsDashboardVisible()} windowVisible={o.IsOverlayVisible(handle)} " +
+                     $"sceneFocus={OpenVR.System.IsInputAvailable()} sceneProcess={sc.GetCurrentSceneFocusProcess()} fullscreen={sc.IsFullscreen()}";
+            if (st == lastTabState) return;
+            lastTabState = st;
+            Log.Info($"VR scene state: {st}");
+            return;
+        }
         uint flags = 0;
         o.GetOverlayFlags(handle, ref flags);
         var state = $"dashboardVisible={o.IsDashboardVisible()} ourTabActive={o.IsActiveDashboardOverlay(handle)} " +
@@ -255,6 +284,34 @@ public class VrOverlay
         {
             Log.Error($"SetOverlayTexture failed: {err}; stopping overlay.");
             Settings.OverlayEnabled.Value = false;
+        }
+        if (IsScene) SubmitScene();
+    }
+
+    /// Scene mode: we're the VR app, so the compositor needs an eye frame from us every frame or it
+    /// fades to its loading grid. For now the "environment" is plain black; the 3D window itself is
+    /// still our overlay, which the compositor draws on top.
+    private void SubmitScene()
+    {
+        var c = OpenVR.Compositor;
+        var werr = c.WaitGetPoses(renderPoses, gamePoses);
+        if (sceneTex == null)
+        {
+            sceneTex = new RenderTexture(256, 256, 0, RenderTextureFormat.Default) { name = "OriVR_Scene" };
+            sceneTex.Create();
+            var prev = RenderTexture.active;
+            RenderTexture.active = sceneTex;
+            GL.Clear(true, true, new Color(0.02f, 0.02f, 0.03f, 1f));
+            RenderTexture.active = prev;
+        }
+        var tex = new Texture_t { handle = sceneTex.GetNativeTexturePtr(), eType = ETextureType.DirectX, eColorSpace = EColorSpace.Auto };
+        var bounds = new VRTextureBounds_t { uMin = 0, vMin = 0, uMax = 1, vMax = 1 };
+        var e1 = c.Submit(EVREye.Eye_Left, ref tex, ref bounds, EVRSubmitFlags.Submit_Default);
+        var e2 = c.Submit(EVREye.Eye_Right, ref tex, ref bounds, EVRSubmitFlags.Submit_Default);
+        if ((werr != EVRCompositorError.None || e1 != EVRCompositorError.None || e2 != EVRCompositorError.None) && !sceneErrorLogged)
+        {
+            sceneErrorLogged = true;
+            Log.Error($"Scene submit: waitGetPoses={werr} left={e1} right={e2}");
         }
     }
 }
