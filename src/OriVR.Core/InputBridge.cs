@@ -49,6 +49,11 @@ public static class InputBridge
             // it had, so replace that state wholesale with ours.
             harmony.Patch(AccessTools.Method(typeof(J2i.Net.XInputWrapper.XInput), nameof(J2i.Net.XInputWrapper.XInput.XInputGetState)),
                 postfix: new HarmonyMethod(typeof(InputBridge), nameof(XInputPostfix)));
+            // Ori picks button labels and map-cursor behaviour from its "last used device" flags.
+            // Our input never touches Unity's joystick API, so it keeps thinking keyboard/mouse.
+            foreach (var getter in new[] { nameof(PlayerInput.WasKeyboardUsedLast), nameof(PlayerInput.WasKeyboardKeyUsedLast), nameof(PlayerInput.IsUsingMouse) })
+                harmony.Patch(AccessTools.PropertyGetter(typeof(PlayerInput), getter),
+                    postfix: new HarmonyMethod(typeof(InputBridge), nameof(NotKeyboardPostfix)));
             Log.Info("Input bridge installed (VR controllers -> game pad).");
         }
         catch (Exception e)
@@ -114,6 +119,7 @@ public static class InputBridge
             buttons[i] = input.GetDigitalActionData(buttonHandles[i], ref dd, dsize, OpenVR.k_ulInvalidInputValueHandle) == EVRInputError.None
                          && dd.bActive && dd.bState;
 
+        TrackLastDevice();
         if (Settings.InputLogRaw.Value)
         {
             LogXInput();
@@ -188,6 +194,39 @@ public static class InputBridge
     private static void ButtonPostfix(XboxControllerInput.Button button, ref bool __result)
     {
         if (Active && !__result) __result = VrButton(button);
+    }
+
+    private static float lastVrInputTime = -100f, lastKeyboardTime = -100f;
+    private static string lastDeviceState = "";
+
+    /// Main thread, every frame: note whether the VR pad or the keyboard/mouse was used last.
+    private static void TrackLastDevice()
+    {
+        var now = UnityEngine.Time.unscaledTime;
+        var any = MathF.Abs(lx) > 0.3f || MathF.Abs(ly) > 0.3f || MathF.Abs(rx) > 0.3f || MathF.Abs(ry) > 0.3f || lt > 0.3f || rt > 0.3f;
+        for (var i = 0; i < (int)B.Count && !any; i++) any = buttons[i];
+        if (any) lastVrInputTime = now;
+        if (UnityEngine.Input.anyKeyDown) lastKeyboardTime = now; // keyboard + mouse buttons only; the VR pad isn't a Unity device
+        if (VrUsedLast)
+        {
+            var g = GameSettings.Instance;
+            if (g != null && g.CurrentControlScheme != ControlScheme.Controller) g.SetControlScheme(ControlScheme.Controller);
+        }
+        if (!Settings.InputLogRaw.Value) return;
+        var pi = PlayerInput.Instance;
+        var gs = GameSettings.Instance;
+        if (pi == null || gs == null) return;
+        var st = $"keyboardLast={pi.WasKeyboardUsedLast} keyLast={pi.WasKeyboardKeyUsedLast} mouse={pi.IsUsingMouse} scheme={gs.CurrentControlScheme}";
+        if (st == lastDeviceState) return;
+        lastDeviceState = st;
+        Log.Info($"Game input device: {st}");
+    }
+
+    private static bool VrUsedLast => Active && lastVrInputTime > lastKeyboardTime;
+
+    private static void NotKeyboardPostfix(ref bool __result)
+    {
+        if (VrUsedLast) __result = false;
     }
 
     private static uint packet;

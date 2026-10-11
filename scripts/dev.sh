@@ -18,7 +18,8 @@ case "${1:-}" in
     exit 0 ;;
 esac
 
-"$DOTNET" build -c Release -v q "$PROJECT_DIR/src/OriVR.Core" | grep -E "error|warning CS" || true
+out=$("$DOTNET" build -c Release -v q "$PROJECT_DIR/src/OriVR.Core" 2>&1) || { echo "$out" | grep -E "error" | sort -u; die "build failed; nothing deployed"; }
+echo "$out" | grep -E "warning CS" | sort -u || true
 [ -f "$BUILD_DIR/plugins/OriVR.Core.dll" ] || die "build failed"
 
 if ori_running; then
