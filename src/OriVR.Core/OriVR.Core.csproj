@@ -29,5 +29,7 @@
     <Reference Include="$(InteropDir)/UnityEngine.dll" />
     <Reference Include="$(InteropDir)/UnityEngine.CoreModule.dll" />
     <Reference Include="$(InteropDir)/UnityEngine.ImageConversionModule.dll" />
+    <Reference Include="$(InteropDir)/__mainWisp.dll" />
+    <Reference Include="$(BepInExDir)/0Harmony.dll" />
   </ItemGroup>
 </Project>

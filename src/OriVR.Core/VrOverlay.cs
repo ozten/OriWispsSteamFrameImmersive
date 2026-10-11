@@ -24,7 +24,7 @@ public class VrOverlay
     private RenderTexture sceneTex;
     private readonly TrackedDevicePose_t[] renderPoses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     private readonly TrackedDevicePose_t[] gamePoses = new TrackedDevicePose_t[0];
-    private bool sceneErrorLogged;
+    private bool sceneErrorLogged, identified;
     private RenderTexture sbs;
     private readonly TrackedDevicePose_t[] poses = new TrackedDevicePose_t[1];
     private float lastWidth, lastDistance;
@@ -73,6 +73,7 @@ public class VrOverlay
                 }
                 OpenVR.Compositor.SetTrackingSpace(ETrackingUniverseOrigin.TrackingUniverseStanding);
                 sceneErrorLogged = false;
+                identified = false;
                 Log.Info($"OpenVR scene app: canRender={OpenVR.Compositor.CanRenderScene()}");
             }
             var overlay = OpenVR.Overlay;
@@ -244,6 +245,14 @@ public class VrOverlay
         if (IsScene)
         {
             var sc = OpenVR.Compositor;
+            var focusProc = sc.GetCurrentSceneFocusProcess();
+            if (!identified && focusProc != 0 && OpenVR.System.IsInputAvailable())
+            {
+                // Tell SteamVR this scene app is Ori (otherwise it shows up as "wine-preloader").
+                identified = true;
+                var aerr = OpenVR.Applications.IdentifyApplication(focusProc, "steam.app.1057090");
+                Log.Info($"IdentifyApplication(pid {focusProc}, steam.app.1057090): {aerr}");
+            }
             var st = $"dashboardVisible={o.IsDashboardVisible()} windowVisible={o.IsOverlayVisible(handle)} " +
                      $"sceneFocus={OpenVR.System.IsInputAvailable()} sceneProcess={sc.GetCurrentSceneFocusProcess()} fullscreen={sc.IsFullscreen()}";
             if (st == lastTabState) return;

@@ -19,6 +19,8 @@ public static class Settings
     public static ConfigEntry<bool> BlankWindowInVR;
     public static ConfigEntry<string> OverlayAnchor;
     public static ConfigEntry<string> VrMode;
+    public static ConfigEntry<bool> InputInvertY;
+    public static ConfigEntry<bool> InputLogRaw;
 
     private static ConfigFile config;
     private static System.DateTime lastWrite;
@@ -50,6 +52,8 @@ public static class Settings
             new ConfigDescription("Window = floating 3D window placed by the mod. Scene = experimental: the game becomes a full VR app (replacing the Frame's flat screen) and shows the same 3D window in an empty scene. Tab = experimental: our own SteamVR dashboard tab in 3D, replacing the Frame's flat game screen. Key: Ctrl+F11",
                 new AcceptableValueList<string>("Window", "Scene", "Tab")));
         if (oldMode != null) VrMode.Value = oldMode;
+        InputInvertY = cfg.Bind("Input", "InvertY", false, "Scene mode: flip the VR thumbsticks' up/down for the game.");
+        InputLogRaw = cfg.Bind("Input", "LogRawControllers", true, "Scene mode: log VR controller buttons/axes when they change (for mapping).");
         BlankWindowInVR = cfg.Bind("VR", "BlankWindowInVR", false,
             "While the VR window is up, show black in the normal game window (the Frame's own flat/theater screen). Key: Shift+F10");
         lastWrite = File.GetLastWriteTimeUtc(cfg.ConfigFilePath);

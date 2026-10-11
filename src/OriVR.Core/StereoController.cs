@@ -57,6 +57,7 @@ public class StereoController
         if (wantOverlay && overlay.Running && overlay.Mode != Settings.VrMode.Value) overlay.Stop(); // mode switched
         if (wantOverlay && !overlay.Running && !overlayFailed) overlayFailed = !overlay.Start(pluginDir);
         if (overlay.Running) overlay.Poll();
+        InputBridge.Poll(overlay.Running && overlay.Mode == "Scene");
         if (!wantOverlay)
         {
             overlay.Hide();
@@ -69,7 +70,14 @@ public class StereoController
     private void HandleKeys()
     {
         var changed = true;
-        if (Input.GetKeyDown(KeyCode.F9)) Settings.StereoEnabled.Value = !Settings.StereoEnabled.Value;
+        // Ctrl+Shift+letter versions of the F-key toggles, for keyboards that need Fn for F-keys.
+        if (Ctrl && Shift && Input.GetKeyDown(KeyCode.S)) Settings.StereoEnabled.Value = !Settings.StereoEnabled.Value;
+        else if (Ctrl && Shift && Input.GetKeyDown(KeyCode.E)) Settings.SwapEyes.Value = !Settings.SwapEyes.Value;
+        else if (Ctrl && Shift && Input.GetKeyDown(KeyCode.V)) Settings.OverlayEnabled.Value = !Settings.OverlayEnabled.Value;
+        else if (Ctrl && Shift && Input.GetKeyDown(KeyCode.R)) overlay.Recenter();
+        else if (Ctrl && Shift && Input.GetKeyDown(KeyCode.M))
+            Settings.VrMode.Value = Settings.VrMode.Value == "Window" ? "Scene" : "Window";
+        else if (Input.GetKeyDown(KeyCode.F9)) Settings.StereoEnabled.Value = !Settings.StereoEnabled.Value;
         else if (Input.GetKeyDown(KeyCode.F10) && Shift) Settings.BlankWindowInVR.Value = !Settings.BlankWindowInVR.Value;
         else if (Input.GetKeyDown(KeyCode.F10)) Settings.SwapEyes.Value = !Settings.SwapEyes.Value;
         else if (Input.GetKeyDown(KeyCode.PageUp)) Settings.OverlayWidth.Value *= 1.1f;

@@ -14,6 +14,8 @@ public sealed class CoreModule : IModule
         Settings.Bind(ctx.Config);
         stereo = new StereoController(ctx.PluginDir);
         probe = new Probe(stereo);
+        InputBridge.Install();
+        Log.Info("No-Fn keys: Ctrl+Shift+S stereo, Ctrl+Shift+E swap eyes, Ctrl+Shift+V VR display, Ctrl+Shift+R recenter, Ctrl+Shift+M Window/Scene mode.");
         Log.Info("F9 stereo on/off, F10 swap eyes, -/= separation, [/] convergence, F11 VR window (Shift+F11 recenter, or re-show tab; Ctrl+F11 Window/Scene mode), PgUp/PgDn VR size, Home/End VR distance, Shift+F10 blank flat window, F8 probe+capture, F7 reload core.");
     }
 
@@ -27,7 +29,11 @@ public sealed class CoreModule : IModule
     // Camera callbacks come from Camera.onPreCull/onPostRender (see StereoController), not EyeHook.
     public void OnPreCull(Camera cam) { }
     public void OnPostRender(Camera cam) { }
-    public void Shutdown() => stereo.Shutdown();
+    public void Shutdown()
+    {
+        InputBridge.Uninstall();
+        stereo.Shutdown();
+    }
 }
 
 internal static class Log
