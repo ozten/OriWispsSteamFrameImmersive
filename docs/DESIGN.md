@@ -26,6 +26,13 @@ the game.
 - Unknowns: does the dashboard honour SBS flags on a dashboard overlay? Does the Frame keep our tab up
   during play, or switch back to the gamescope tab? Does controller input still reach the game?
 - Cost: small. It's a hot-reloadable spike on the current code.
+- **Spike result (2026-10-10): doesn't work on the Frame.** The tab is created and keeps
+  `SideBySide_Parallel` (flags 0x8400), and `ShowDashboard` makes it active. But the Frame's game
+  screen is *not* a tab that ours replaces: our tab appears as an extra, smaller flat panel in front of
+  the curved game screen, with both Ori icons in the dashboard's side bar. Dashboard overlays are only
+  visible while the dashboard is open, and entering Gamepad mode (needed to play) closes the dashboard,
+  so our tab disappears and input goes to the Frame's screen. The game is shown with
+  `IsDashboardVisible()==false` during normal play. Code kept behind `[VR] Mode = Tab` (Ctrl+F11).
 
 ### B. Become a VR scene app (the UEVR / REFramework model)
 `VR_Init(Scene)` from inside the game, render a virtual screen ourselves (a curved quad in a dark or
@@ -53,7 +60,7 @@ Black out the flat screen, auto-size, and recenter heuristically. It always leav
 misalignment. Only a fallback.
 
 ## Recommendation
-1. Spike **A** (about an hour, hot-reload): it's the cheapest way to get a single, Frame-managed 3D screen.
+1. ~~Spike **A**~~: tried, fails (see above).
 2. Spike **B** in parallel or next. It's the long-term answer if A's tab gets swapped out or loses SBS,
    and it unlocks head-coupled parallax and PC SteamVR parity.
 3. Open a gamescope issue for **C**.
