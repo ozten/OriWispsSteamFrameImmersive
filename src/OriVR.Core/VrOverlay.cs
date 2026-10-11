@@ -75,6 +75,7 @@ public class VrOverlay
                 sceneErrorLogged = false;
                 identified = false;
                 Log.Info($"OpenVR scene app: canRender={OpenVR.Compositor.CanRenderScene()}");
+                InputBridge.OnSessionStart(pluginDir);
             }
             var overlay = OpenVR.Overlay;
             EVROverlayError oerr;
@@ -128,7 +129,9 @@ public class VrOverlay
     public void Hide()
     {
         if (!Running) return;
-        if (IsTab) { Stop(); return; } // a dashboard tab can't be hidden; destroy it so the Frame's screen returns
+        // A dashboard tab can't be hidden, and a scene app that stops submitting frames leaves the Frame
+        // on its "waiting" screen: tear both down so the Frame's own screen returns.
+        if (IsTab || IsScene) { Stop(); return; }
         Running = false;
         try { OpenVR.Overlay?.HideOverlay(handle); }
         catch (Exception e) { Log.Error($"VR overlay hide: {e}"); }
