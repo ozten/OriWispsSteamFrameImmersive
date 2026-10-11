@@ -44,6 +44,11 @@ public static class InputBridge
                 postfix: new HarmonyMethod(typeof(InputBridge), nameof(AxisPostfix)));
             harmony.Patch(AccessTools.Method(t, nameof(XboxControllerInput.GetButton)),
                 postfix: new HarmonyMethod(typeof(InputBridge), nameof(ButtonPostfix)));
+            // Ori also reads the pad through the XInput wrapper on its own polling thread (the map
+            // zoom uses it). In Scene mode Steam's emulated pad is left frozen in whatever state
+            // it had, so replace that state wholesale with ours.
+            harmony.Patch(AccessTools.Method(typeof(J2i.Net.XInputWrapper.XInput), nameof(J2i.Net.XInputWrapper.XInput.XInputGetState)),
+                postfix: new HarmonyMethod(typeof(InputBridge), nameof(XInputPostfix)));
             Log.Info("Input bridge installed (VR controllers -> game pad).");
         }
         catch (Exception e)
@@ -111,6 +116,7 @@ public static class InputBridge
 
         if (Settings.InputLogRaw.Value)
         {
+            LogXInput();
             var pressed = "";
             for (var i = 0; i < (int)B.Count; i++) if (buttons[i]) pressed += ButtonNames[i] + " ";
             var raw = $"L=({Q(lx)},{Q(ly)}) R=({Q(rx)},{Q(ry)}) LT={Q(lt)} RT={Q(rt)} [{pressed.Trim()}]";
@@ -162,9 +168,19 @@ public static class InputBridge
         _ => false,
     };
 
+    private static readonly float[] lastGameAxis = new float[16];
+
     private static void AxisPostfix(XboxControllerInput.Axis axis, ref float __result)
     {
         if (!Active) return;
+        // Diagnostics: what the game's own reader returns (before we add the VR pad), on change.
+        var ai = (int)axis & 15;
+        var q = MathF.Round(__result * 4f) / 4f;
+        if (Settings.InputLogRaw.Value && q != lastGameAxis[ai])
+        {
+            lastGameAxis[ai] = q;
+            Log.Info($"Game axis {axis} = {__result:F2} (VR {VrAxis(axis):F2})");
+        }
         var v = VrAxis(axis);
         if (MathF.Abs(v) > MathF.Abs(__result)) __result = v;
     }
@@ -172,6 +188,43 @@ public static class InputBridge
     private static void ButtonPostfix(XboxControllerInput.Button button, ref bool __result)
     {
         if (Active && !__result) __result = VrButton(button);
+    }
+
+    private static uint packet;
+    private static volatile string xinputSeen = "";
+
+    private static void XInputPostfix(int dwUserIndex, ref J2i.Net.XInputWrapper.XInputState pState, ref int __result)
+    {
+        if (!Active || dwUserIndex != 0) return;
+        var g = pState.Gamepad;
+        var seen = $"res={__result} btn=0x{g.wButtons:X} LT={g.bLeftTrigger} RT={g.bRightTrigger}";
+        if (Settings.InputLogRaw.Value && seen != xinputSeen) xinputSeen = seen; // logged from main thread
+
+        int w = 0;
+        if (Btn(B.DUp)) w |= 0x0001; if (Btn(B.DDown)) w |= 0x0002; if (Btn(B.DLeft)) w |= 0x0004; if (Btn(B.DRight)) w |= 0x0008;
+        if (Btn(B.Start)) w |= 0x0010; if (Btn(B.Back)) w |= 0x0020; if (Btn(B.LS)) w |= 0x0040; if (Btn(B.RS)) w |= 0x0080;
+        if (Btn(B.LB)) w |= 0x0100; if (Btn(B.RB)) w |= 0x0200;
+        if (Btn(B.A)) w |= 0x1000; if (Btn(B.B)) w |= 0x2000; if (Btn(B.X)) w |= 0x4000; if (Btn(B.Y)) w |= 0x8000;
+        g.wButtons = unchecked((short)w);
+        g.bLeftTrigger = (byte)Math.Clamp((int)(lt * 255f), 0, 255);
+        g.bRightTrigger = (byte)Math.Clamp((int)(rt * 255f), 0, 255);
+        g.sThumbLX = Stick(lx); g.sThumbLY = Stick(ly);
+        g.sThumbRX = Stick(rx); g.sThumbRY = Stick(ry);
+        pState.Gamepad = g;
+        pState.PacketNumber = (int)++packet;
+        __result = 0; // ERROR_SUCCESS: a pad is connected
+    }
+
+    private static short Stick(float v) => (short)Math.Clamp((int)(v * 32767f), -32768, 32767);
+
+    private static string lastXinputLogged = "";
+    /// Main-thread log of what the XInput wrapper reported before we replaced it.
+    public static void LogXInput()
+    {
+        var s = xinputSeen;
+        if (s == lastXinputLogged) return;
+        lastXinputLogged = s;
+        Log.Info($"Game XInput (before bridge): {s}");
     }
 
     private static string Manifest()
