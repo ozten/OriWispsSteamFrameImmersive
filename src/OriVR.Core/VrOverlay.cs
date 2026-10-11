@@ -25,6 +25,9 @@ public class VrOverlay
     private readonly TrackedDevicePose_t[] renderPoses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     private readonly TrackedDevicePose_t[] gamePoses = new TrackedDevicePose_t[0];
     private bool sceneErrorLogged, identified;
+    private int frames;
+    private long waitTicks;
+    private float statStart;
     private RenderTexture sbs;
     private readonly TrackedDevicePose_t[] poses = new TrackedDevicePose_t[1];
     private float lastWidth, lastDistance;
@@ -306,7 +309,25 @@ public class VrOverlay
     private void SubmitScene()
     {
         var c = OpenVR.Compositor;
+        var t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         var werr = c.WaitGetPoses(renderPoses, gamePoses);
+        waitTicks += System.Diagnostics.Stopwatch.GetTimestamp() - t0;
+        frames++;
+        var now = Time.realtimeSinceStartup;
+        if (now - statStart >= 5f)
+        {
+            var secs = now - statStart;
+            var ft = new Compositor_FrameTiming { m_nSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Compositor_FrameTiming>() };
+            var hz = 0f;
+            var perr = ETrackedPropertyError.TrackedProp_Success;
+            if (OpenVR.System != null) hz = OpenVR.System.GetFloatTrackedDeviceProperty(0, ETrackedDeviceProperty.Prop_DisplayFrequency_Float, ref perr);
+            if (c.GetFrameTiming(ref ft, 0))
+                Log.Info($"Compositor: {hz:F0} Hz, presents/frame={ft.m_nNumFramePresents} mispresented={ft.m_nNumMisPresented} dropped={ft.m_nNumDroppedFrames} " +
+                         $"reproj=0x{ft.m_nReprojectionFlags:X} clientInterval={ft.m_flClientFrameIntervalMs:F1}ms compGpu={ft.m_flCompositorRenderGpuMs:F1}ms totalGpu={ft.m_flTotalRenderGpuMs:F1}ms");
+            Log.Info($"Scene perf: {frames / secs:F1} fps, WaitGetPoses {waitTicks * 1000.0 / System.Diagnostics.Stopwatch.Frequency / frames:F1} ms/frame, " +
+                     $"vSyncCount={QualitySettings.vSyncCount} targetFps={Application.targetFrameRate}");
+            frames = 0; waitTicks = 0; statStart = now;
+        }
         if (sceneTex == null)
         {
             sceneTex = new RenderTexture(256, 256, 0, RenderTextureFormat.Default) { name = "OriVR_Scene" };
