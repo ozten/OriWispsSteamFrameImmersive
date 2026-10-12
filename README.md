@@ -68,3 +68,7 @@ and `deploy.sh` sets `UpdateInteropAssemblies = false`. Re-run both after a game
 - `src/OriVR/`: small, stable host plugin. It owns the Il2Cpp-registered types and hot-reloads the core
 - `src/OriVR.Core/`: everything else (stereo rendering, VR overlay, probe). Rebuild with `scripts/dev.sh` while the game runs and it reloads in place
 - `docs/NOTES.md`: findings and environment notes
+
+## License
+
+MIT, see [LICENSE](LICENSE). `src/OriVR.Core/ThirdParty/openvr_api.cs` is Valve's, under its own license (`ThirdParty/OPENVR_LICENSE`).
