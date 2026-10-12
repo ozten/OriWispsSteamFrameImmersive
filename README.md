@@ -1,5 +1,7 @@
 # OriVRMod
 
+![Ori Steam Frame Immersive mod: the game's foreground, middle ground and background layers shown at different depths](docs/images/layered-forest-depth.png)
+
 Stereoscopic 3D for *Ori and the Will of the Wisps* on a VR headset. The game
 becomes a VR app and plays on a big screen in front of you, with each eye
 getting its own render, so the game's layered scenes show real depth.
