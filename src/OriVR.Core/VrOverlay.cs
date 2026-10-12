@@ -58,17 +58,7 @@ public class VrOverlay
             }
             var err = EVRInitError.None;
             Mode = Settings.VrMode.Value is "Tab" or "Scene" ? Settings.VrMode.Value : "Window";
-            // The preloader patcher (OriVR.Patcher) may already have connected us as a scene app before
-            // the game window opened; adopt that session once instead of connecting again.
-            var early = Environment.GetEnvironmentVariable("ORIVR_EARLY_VR");
-            Environment.SetEnvironmentVariable("ORIVR_EARLY_VR", null);
-            if (early != null && OpenVR.GetInitToken().ToString() == early && IsScene)
-                Log.Info("Adopting the early SteamVR scene session from the preloader.");
-            else
-            {
-                if (early != null) OpenVR.Shutdown(); // early session unusable here (mode changed)
-                OpenVR.Init(ref err, IsScene ? EVRApplicationType.VRApplication_Scene : EVRApplicationType.VRApplication_Overlay);
-            }
+            OpenVR.Init(ref err, IsScene ? EVRApplicationType.VRApplication_Scene : EVRApplicationType.VRApplication_Overlay);
             if (err != EVRInitError.None)
             {
                 Log.Error($"OpenVR init failed: {err}");
