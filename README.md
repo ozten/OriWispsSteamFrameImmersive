@@ -13,6 +13,30 @@ press *Resume Game*.
 
 ![Options > Gameplay with the Immersive 3D toggle](docs/images/options-immersive-3d.jpg)
 
+## Install
+
+Linux / SteamOS with Proton (developed on the Steam Frame). Quit Ori first, then in a terminal
+(on the Frame or Steam Deck: Desktop Mode → Konsole):
+
+```sh
+curl -fLO https://github.com/ozten/OriWispsSteamFrameImmersive/releases/latest/download/ori-vr.sh
+bash ori-vr.sh install
+```
+
+That's it. Start Ori from Steam as usual, with no launch option needed. The installer backs up your
+saves to `~/OriVR-backups`, downloads BepInEx and the mod, prepares them for your copy of the game
+(about a minute the first time), and switches the mod loader on for Ori only.
+
+| Command | What it does |
+|---|---|
+| `bash ori-vr.sh uninstall` | Remove everything the mod added. Ori is vanilla again. |
+| `bash ori-vr.sh disable` / `enable` | Start Ori without the mod, or with it again, keeping the files. |
+| `bash ori-vr.sh install` | Also the way to update, and to re-run after a game update. |
+| `bash ori-vr.sh status` | Show whether it's installed and enabled. |
+
+Ori must be closed for all of these. When SteamVR's menu appears once at launch, press
+**Resume Game** ([#1](https://github.com/ozten/OriWispsSteamFrameImmersive/issues/1)).
+
 ## Playing
 
 - **Immersive 3D** lives in *Options → Gameplay*. Off shows the same image to
@@ -55,34 +79,33 @@ a second when the file changes. These keyboard keys are for development and tuni
 4. The *Immersive 3D* option is a clone of the game's own "Show Map Trail" row,
    added to the Gameplay options page at runtime.
 
-## Usage
+## Developing
+
+Building from source needs the .NET 8 SDK (without root:
+`curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0`).
 
 ```sh
 scripts/backup-saves.sh        # back up your saves first
 scripts/fetch-bepinex.sh       # download BepInEx 6 IL2CPP into vendor/
-scripts/gen-interop.sh         # generate interop assemblies natively (needs .NET 8 SDK)
-scripts/deploy.sh install      # copy into the game folder (tracked by a manifest)
+scripts/gen-interop.sh         # generate interop assemblies natively
+scripts/deploy.sh install      # copy into the game folder (tracked by the same manifest as ori-vr.sh)
+bash ori-vr.sh enable          # switch the loader on for Ori (DLL override in its Proton prefix)
+scripts/dev.sh                 # rebuild; hot-reloads the core while Ori runs
+scripts/package.sh             # build the release zip (build/release/) that ori-vr.sh installs
 ```
-
-Then in Steam: Ori → Properties → Launch Options:
-
-```
-WINEDLLOVERRIDES="winhttp=n,b" %command%
-```
-
-**Turning it off:** clear the launch option (the game runs vanilla even with files
-present), or run `scripts/deploy.sh uninstall` to remove every file the mod added.
 
 Normally BepInEx generates interop assemblies on the first launch. Under FEX
 (x86 emulation on ARM) that crashed with an `AccessViolationException`, so
-`gen-interop.sh` runs the same Cpp2IL + Il2CppInterop steps natively (about 30 s)
-and `deploy.sh` sets `UpdateInteropAssemblies = false`. Re-run both after a game update.
+`gen-interop.sh` (and the installer, with a self-contained build of `tools/InteropGen`) runs the
+same Cpp2IL + Il2CppInterop steps natively and sets `UpdateInteropAssemblies = false`.
 
-.NET 8 SDK without root: `curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0`
+Instead of `ori-vr.sh enable`, the Steam launch option `WINEDLLOVERRIDES="winhttp=n,b" %command%`
+also works.
 
 ## Layout
 
-- `scripts/`: backup, fetch, interop generation, deploy/uninstall
+- `ori-vr.sh`: the end-user installer
+- `scripts/`: backup, fetch, interop generation, deploy/uninstall, dev loop, packaging
 - `tools/InteropGen/`: native interop generator (mirrors BepInEx's Il2CppInteropManager)
 - `src/OriVR/`: small, stable host plugin. It owns the Il2Cpp-registered types and hot-reloads the core
 - `src/OriVR.Core/`: everything else (stereo rendering, VR overlay, probe). Rebuild with `scripts/dev.sh` while the game runs and it reloads in place
@@ -90,4 +113,4 @@ and `deploy.sh` sets `UpdateInteropAssemblies = false`. Re-run both after a game
 
 ## License
 
-MIT, see [LICENSE](LICENSE). `src/OriVR.Core/ThirdParty/openvr_api.cs` is Valve's, under its own license (`ThirdParty/OPENVR_LICENSE`).
+MIT, see [LICENSE](LICENSE). Third-party components (OpenVR, BepInEx, Il2CppInterop, Cpp2IL, .NET) are under their own licenses; see [THIRD-PARTY.md](THIRD-PARTY.md).
