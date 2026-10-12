@@ -24,8 +24,7 @@ public class VrOverlay
     private RenderTexture sceneTex;
     private readonly TrackedDevicePose_t[] renderPoses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     private readonly TrackedDevicePose_t[] gamePoses = new TrackedDevicePose_t[0];
-    private bool sceneErrorLogged, identified;
-    private uint identifiedPid;
+    private bool sceneErrorLogged;
     private int frames;
     private long waitTicks;
     private float statStart;
@@ -59,7 +58,17 @@ public class VrOverlay
             }
             var err = EVRInitError.None;
             Mode = Settings.VrMode.Value is "Tab" or "Scene" ? Settings.VrMode.Value : "Window";
-            OpenVR.Init(ref err, IsScene ? EVRApplicationType.VRApplication_Scene : EVRApplicationType.VRApplication_Overlay);
+            // The preloader patcher (OriVR.Patcher) may already have connected us as a scene app before
+            // the game window opened; adopt that session once instead of connecting again.
+            var early = Environment.GetEnvironmentVariable("ORIVR_EARLY_VR");
+            Environment.SetEnvironmentVariable("ORIVR_EARLY_VR", null);
+            if (early != null && OpenVR.GetInitToken().ToString() == early && IsScene)
+                Log.Info("Adopting the early SteamVR scene session from the preloader.");
+            else
+            {
+                if (early != null) OpenVR.Shutdown(); // early session unusable here (mode changed)
+                OpenVR.Init(ref err, IsScene ? EVRApplicationType.VRApplication_Scene : EVRApplicationType.VRApplication_Overlay);
+            }
             if (err != EVRInitError.None)
             {
                 Log.Error($"OpenVR init failed: {err}");
@@ -76,10 +85,8 @@ public class VrOverlay
                 }
                 OpenVR.Compositor.SetTrackingSpace(ETrackingUniverseOrigin.TrackingUniverseStanding);
                 sceneErrorLogged = false;
-                identified = false;
                 Log.Info($"OpenVR scene app: canRender={OpenVR.Compositor.CanRenderScene()}");
                 InputBridge.OnSessionStart(pluginDir);
-                Identify(UnixPid());
             }
             var overlay = OpenVR.Overlay;
             EVROverlayError oerr;
@@ -199,35 +206,6 @@ public class VrOverlay
         Log.Info($"VR window placed {distance:F2} m ahead of the seated origin, {width:F2} m wide.");
     }
 
-    /// Tell SteamVR this scene app is Ori (otherwise it shows up as "wine-preloader").
-    private void Identify(uint pid)
-    {
-        if (identified || pid == 0) return;
-        var err = OpenVR.Applications.IdentifyApplication(pid, "steam.app.1057090");
-        identified = err == EVRApplicationError.None;
-        if (identified) identifiedPid = pid;
-        Log.Info($"IdentifyApplication(pid {pid}, steam.app.1057090): {err}");
-    }
-
-    /// SteamVR knows us by the Linux pid of the game process, which Wine names "oriwotw.exe"
-    /// (Z: maps to /; /proc/self from Wine resolved to a different process).
-    private static uint UnixPid()
-    {
-        try
-        {
-            var found = new System.Collections.Generic.List<uint>();
-            foreach (var dir in Directory.GetDirectories(@"Z:\proc"))
-            {
-                if (!uint.TryParse(Path.GetFileName(dir), out var pid)) continue;
-                try { if (File.ReadAllText(Path.Combine(dir, "comm")).Trim() == "oriwotw.exe") found.Add(pid); }
-                catch { }
-            }
-            Log.Info($"Game processes named oriwotw.exe: [{string.Join(", ", found)}]");
-            return found.Count == 1 ? found[0] : 0;
-        }
-        catch (Exception e) { Log.Info($"Unix pid unavailable ({e.GetType().Name}); identifying later."); return 0; }
-    }
-
     private string lastTabState = "";
     private float nextPoll;
 
@@ -241,8 +219,6 @@ public class VrOverlay
         if (IsScene)
         {
             var sc = OpenVR.Compositor;
-            var focusProc = sc.GetCurrentSceneFocusProcess();
-            if (focusProc != 0 && focusProc != identifiedPid && OpenVR.System.IsInputAvailable()) { identified = false; Identify(focusProc); }
             var st = $"dashboardVisible={o.IsDashboardVisible()} windowVisible={o.IsOverlayVisible(handle)} " +
                      $"sceneFocus={OpenVR.System.IsInputAvailable()} sceneProcess={sc.GetCurrentSceneFocusProcess()} fullscreen={sc.IsFullscreen()}";
             if (st == lastTabState) return;

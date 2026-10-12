@@ -38,6 +38,11 @@ install_plugins() {
   else
     echo "No built plugins in $BUILD_DIR/plugins (that's fine for a loader-only test)."
   fi
+  # Preloader patcher: connects to SteamVR before the game window opens.
+  if [ -d "$BUILD_DIR/patchers" ] && [ -n "$(ls -A "$BUILD_DIR/patchers")" ]; then
+    copy_tree "$BUILD_DIR/patchers" "BepInEx/patchers"
+    echo "Patchers copied."
+  fi
 }
 
 configure_bepinex() {
