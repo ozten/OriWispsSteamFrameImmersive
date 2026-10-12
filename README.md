@@ -14,7 +14,8 @@ Frame-specific in principle.
 | Key | Action |
 |---|---|
 | F9 | Stereo on/off |
-| F11 | Show the 3D image in the headset (SteamVR overlay); Shift+F11 recenters it (Tab mode: re-shows the tab) |
+| F11 | Show the 3D image in the headset (SteamVR overlay) |
+| Shift+F11 | Recenter (same as the headset's own recenter: on the Steam Frame, hold the Steam button) |
 | Ctrl+Shift+S / E / V / R / M | No-Fn versions of F9 / F10 / F11 / Shift+F11 / Ctrl+F11 |
 | Ctrl+F11 | Switch VR mode: floating Window or experimental Scene (game becomes a full VR app) |
 | F10 | Swap eyes |
@@ -22,6 +23,9 @@ Frame-specific in principle.
 | `[` / `]` | Zero-parallax (screen) depth |
 | F8 | Write a camera report and capture both eye images |
 | F7 | Reload the core plugin |
+
+The 3D window sits straight ahead of SteamVR's seated origin, so the headset's
+system recenter puts it in front of you; the mod saves no position of its own.
 
 All settings live in `BepInEx/config/com.ozten.orivr.cfg` and are re-read within a second when the file changes.
 

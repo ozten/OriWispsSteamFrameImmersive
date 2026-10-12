@@ -17,7 +17,6 @@ public static class Settings
     public static ConfigEntry<float> OverlayWidth;
     public static ConfigEntry<float> OverlayDistance;
     public static ConfigEntry<bool> BlankWindowInVR;
-    public static ConfigEntry<string> OverlayAnchor;
     public static ConfigEntry<string> VrMode;
     public static ConfigEntry<bool> InputInvertY;
     public static ConfigEntry<bool> InputLogRaw;
@@ -38,11 +37,9 @@ public static class Settings
             "Show the same image to both eyes while the game is paused (menus sit close to the camera and don't fuse).");
         EyeResolutionScale = cfg.Bind("Stereo", "EyeResolutionScale", 1.0f, "Per-eye render size relative to the game window.");
         OverlayEnabled = cfg.Bind("VR", "OverlayEnabled", false,
-            "Show the stereo pair in the headset as a floating SteamVR 3D window (needs Stereo.Enabled). Key: F11; Shift+F11 recenters.");
+            "Show the stereo pair in the headset as a floating SteamVR 3D window (needs Stereo.Enabled). Key: F11. Recenter with the headset's own recenter (Steam Frame: hold the Steam button).");
         OverlayWidth = cfg.Bind("VR", "OverlayWidth", 2.5f, "Width of the floating window in meters. Keys: PageUp / PageDown");
         OverlayDistance = cfg.Bind("VR", "OverlayDistance", 2.5f, "Distance from your head in meters. Keys: Home (closer) / End (further)");
-        OverlayAnchor = cfg.Bind("VR", "OverlayAnchor", "",
-            "Saved viewer position and facing (x,y,z,forwardX,forwardZ) the VR window is placed relative to. Set by Shift+F11; clear it to re-anchor.");
         // BepInEx keeps an entry's first definition (including its allowed values) for the life of
         // the game, so drop it first: otherwise a hot-reloaded core can't add new modes.
         var modeDef = new ConfigDefinition("VR", "Mode");

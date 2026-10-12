@@ -29,7 +29,6 @@ public class VrOverlay
     private long waitTicks;
     private float statStart;
     private RenderTexture sbs;
-    private readonly TrackedDevicePose_t[] poses = new TrackedDevicePose_t[1];
     private float lastWidth, lastDistance;
     private bool placed;
 
@@ -160,10 +159,8 @@ public class VrOverlay
         Log.Info("VR overlay stopped.");
     }
 
-    private bool recenterRequested;
-
-    /// Move the window straight ahead of where the headset is looking (yaw only, so it stays upright)
-    /// and remember that spot.
+    /// Ask SteamVR to make the current head pose the seated origin, which is what the Frame's own
+    /// recenter (hold the Steam button) does. The window follows on its own.
     public void Recenter()
     {
         if (IsTab && initialized)
@@ -172,13 +169,13 @@ public class VrOverlay
             Log.Info("VR dashboard tab re-shown.");
             return;
         }
-        recenterRequested = true;
-        placed = false;
+        if (!initialized) return;
+        OpenVR.Chaperone?.ResetZeroPose(ETrackingUniverseOrigin.TrackingUniverseSeated);
+        Log.Info("VR seated origin reset.");
     }
 
-    /// The window's anchor (viewer position + facing) is saved in the config, so it stays put
-    /// across F9/F11 toggles, core reloads and game restarts. It only moves on Shift+F11, or the
-    /// first time ever (no saved anchor).
+    /// The window sits straight ahead of SteamVR's seated origin (at eye height, upright), so the
+    /// system recenter puts it in front of you; the mod keeps no position of its own.
     private void ApplyLayout()
     {
         var overlay = OpenVR.Overlay;
@@ -193,49 +190,11 @@ public class VrOverlay
         if (IsTab || (placed && distance == lastDistance)) return;
         lastDistance = distance;
 
-        if (recenterRequested || !TryParseAnchor(Settings.OverlayAnchor.Value, out _, out _))
-        {
-            recenterRequested = false;
-            OpenVR.System?.GetDeviceToAbsoluteTrackingPose(ETrackingUniverseOrigin.TrackingUniverseStanding, 0f, poses);
-            var hm = poses[0].bPoseIsValid ? poses[0].mDeviceToAbsoluteTracking
-                                           : OpenVR.System.GetSeatedZeroPoseToStandingAbsoluteTrackingPose();
-            var f = new Vector3(-hm.m2, 0f, -hm.m10); // poses look down their -Z
-            f = f.sqrMagnitude > 1e-4f ? f.normalized : new Vector3(0f, 0f, -1f);
-            Settings.OverlayAnchor.Value = FormattableString.Invariant($"{hm.m3:F3},{hm.m7:F3},{hm.m11:F3},{f.x:F4},{f.z:F4}");
-            Settings.Save();
-            Log.Info($"VR window anchor set from headset (valid={poses[0].bPoseIsValid}).");
-        }
-        TryParseAnchor(Settings.OverlayAnchor.Value, out var eye, out var fwd);
-
-        var pos = eye + fwd * distance;
-        var z = -fwd;                            // overlay is seen from its +Z side
-        var x = new Vector3(z.z, 0f, -z.x);      // up × z
-        var t = new HmdMatrix34_t
-        {
-            m0 = x.x, m1 = 0f, m2 = z.x, m3 = pos.x,
-            m4 = 0f, m5 = 1f, m6 = 0f, m7 = pos.y,
-            m8 = x.z, m9 = 0f, m10 = z.z, m11 = pos.z,
-        };
-        overlay.SetOverlayTransformAbsolute(handle, ETrackingUniverseOrigin.TrackingUniverseStanding, ref t);
+        // Identity rotation: the overlay faces +Z, toward the viewer looking down -Z.
+        var t = new HmdMatrix34_t { m0 = 1f, m5 = 1f, m10 = 1f, m11 = -distance };
+        overlay.SetOverlayTransformAbsolute(handle, ETrackingUniverseOrigin.TrackingUniverseSeated, ref t);
         placed = true;
-        Log.Info($"VR window placed {distance:F2} m ahead, {width:F2} m wide, at {pos}.");
-    }
-
-    private static bool TryParseAnchor(string s, out Vector3 eye, out Vector3 fwd)
-    {
-        eye = new Vector3(0f, 1.2f, 0f);
-        fwd = new Vector3(0f, 0f, -1f);
-        var p = (s ?? "").Split(',');
-        if (p.Length != 5) return false;
-        var v = new float[5];
-        for (var i = 0; i < 5; i++)
-            if (!float.TryParse(p[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out v[i]))
-                return false;
-        var f = new Vector3(v[3], 0f, v[4]);
-        if (f.sqrMagnitude < 1e-4f) return false;
-        eye = new Vector3(v[0], v[1], v[2]);
-        fwd = f.normalized;
-        return true;
+        Log.Info($"VR window placed {distance:F2} m ahead of the seated origin, {width:F2} m wide.");
     }
 
     private string lastTabState = "";
