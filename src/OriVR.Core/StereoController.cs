@@ -54,9 +54,11 @@ public class StereoController
         if (want && !active) Activate(main);
         if (active) EnsureTextures();
 
-        // Scene mode stays up without a camera (loading screens) and with 3D off: every hand-back to the
-        // Frame's flat screen pops SteamVR's dashboard and costs a VR re-init.
-        var wantOverlay = Settings.OverlayEnabled.Value && (active || Settings.VrMode.Value == "Scene");
+        // Enter VR with the first gameplay camera, so the startup logos and loading play on the Frame's
+        // flat screen (in VR they'd be black). Once in, Scene mode stays up without a camera (later
+        // loading screens) and with 3D off: every hand-back to the flat screen pops SteamVR's
+        // dashboard and costs a VR re-init.
+        var wantOverlay = Settings.OverlayEnabled.Value && (active || (overlay.Running && overlay.Mode == "Scene"));
         if (wantOverlay && overlay.Running && overlay.Mode != Settings.VrMode.Value) overlay.Stop(); // mode switched
         if (wantOverlay && !overlay.Running && !overlayFailed) overlayFailed = !overlay.Start(pluginDir);
         if (overlay.Running) overlay.Poll();
