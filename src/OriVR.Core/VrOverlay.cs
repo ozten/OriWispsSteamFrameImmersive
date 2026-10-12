@@ -25,6 +25,7 @@ public class VrOverlay
     private readonly TrackedDevicePose_t[] renderPoses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     private readonly TrackedDevicePose_t[] gamePoses = new TrackedDevicePose_t[0];
     private bool sceneErrorLogged, identified;
+    private uint identifiedPid;
     private int frames;
     private long waitTicks;
     private float statStart;
@@ -204,13 +205,26 @@ public class VrOverlay
         if (identified || pid == 0) return;
         var err = OpenVR.Applications.IdentifyApplication(pid, "steam.app.1057090");
         identified = err == EVRApplicationError.None;
+        if (identified) identifiedPid = pid;
         Log.Info($"IdentifyApplication(pid {pid}, steam.app.1057090): {err}");
     }
 
-    /// SteamVR knows us by our Linux pid (wine-preloader), not the Windows one. Wine maps Z: to /.
+    /// SteamVR knows us by the Linux pid of the game process, which Wine names "oriwotw.exe"
+    /// (Z: maps to /; /proc/self from Wine resolved to a different process).
     private static uint UnixPid()
     {
-        try { return uint.Parse(File.ReadAllText(@"Z:\proc\self\stat").Split(' ')[0]); }
+        try
+        {
+            var found = new System.Collections.Generic.List<uint>();
+            foreach (var dir in Directory.GetDirectories(@"Z:\proc"))
+            {
+                if (!uint.TryParse(Path.GetFileName(dir), out var pid)) continue;
+                try { if (File.ReadAllText(Path.Combine(dir, "comm")).Trim() == "oriwotw.exe") found.Add(pid); }
+                catch { }
+            }
+            Log.Info($"Game processes named oriwotw.exe: [{string.Join(", ", found)}]");
+            return found.Count == 1 ? found[0] : 0;
+        }
         catch (Exception e) { Log.Info($"Unix pid unavailable ({e.GetType().Name}); identifying later."); return 0; }
     }
 
@@ -228,7 +242,7 @@ public class VrOverlay
         {
             var sc = OpenVR.Compositor;
             var focusProc = sc.GetCurrentSceneFocusProcess();
-            if (!identified && focusProc != 0 && OpenVR.System.IsInputAvailable()) Identify(focusProc);
+            if (focusProc != 0 && focusProc != identifiedPid && OpenVR.System.IsInputAvailable()) { identified = false; Identify(focusProc); }
             var st = $"dashboardVisible={o.IsDashboardVisible()} windowVisible={o.IsOverlayVisible(handle)} " +
                      $"sceneFocus={OpenVR.System.IsInputAvailable()} sceneProcess={sc.GetCurrentSceneFocusProcess()} fullscreen={sc.IsFullscreen()}";
             if (st == lastTabState) return;

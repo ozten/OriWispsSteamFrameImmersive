@@ -23,7 +23,7 @@ public static class ImmersiveMenu
     private static MessageBox stateText;
     private static Il2CppSystem.Action pressedCb;
     private static float nextTry;
-    private static bool lastShown;
+    private static bool lastShown, stateApplied;
 
     public static bool Enabled => Settings.StereoEnabled.Value;
 
@@ -50,7 +50,7 @@ public static class ImmersiveMenu
             return;
         }
         // Keep the On/Off label in step with the setting (it can also change from the config file or keys).
-        if (lastShown != Enabled || stateText == null) RefreshState();
+        if (!stateApplied || lastShown != Enabled) RefreshState();
     }
 
     private static void Inject()
@@ -64,6 +64,7 @@ public static class ImmersiveMenu
         var existing = pivot.Find(RowName);
         if (existing != null) Object.DestroyImmediate(existing.gameObject); // left over from a previous core
 
+        stateApplied = false;
         row = Object.Instantiate(template.gameObject, pivot);
         row.name = RowName;
         var rowTf = row.transform;
@@ -102,12 +103,17 @@ public static class ImmersiveMenu
         RefreshState();
     }
 
+    /// The cloned state text starts as the template's "[X] Yes" (with an X button icon); show the
+    /// game's own On/Off instead. Retried until the texts manager exists.
     private static void RefreshState()
     {
-        lastShown = Enabled;
         var texts = OptionsScreenTextsManager.Instance;
         if (stateText == null || texts == null) return;
+        lastShown = Enabled;
         stateText.SetMessageProvider(lastShown ? texts.OnMessageProvider : texts.OffMessageProvider);
+        var icon = stateText.transform.Find("buttonX(Clone)");
+        if (icon != null) Object.Destroy(icon.gameObject);
+        stateApplied = true;
     }
 
     /// A message provider with the same text in every language (the game's own are translated assets).
@@ -137,6 +143,7 @@ public static class ImmersiveMenu
         }
         row = null;
         stateText = null;
+        stateApplied = false;
         pressedCb = null;
     }
 }
