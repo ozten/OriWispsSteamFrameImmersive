@@ -27,7 +27,7 @@ public static class Settings
     public static void Bind(ConfigFile cfg)
     {
         config = cfg;
-        StereoEnabled = cfg.Bind("Stereo", "Enabled", false, "Render side-by-side stereo. Toggle in game with F9.");
+        StereoEnabled = cfg.Bind("Stereo", "Enabled", true, "3D (a separate image per eye). In game: Options > Gameplay > Immersive 3D, or F9.");
         Separation = cfg.Bind("Stereo", "Separation", 0.8f,
             "Distance between the eyes in world units at normal gameplay framing (Ori ~29 units away); scaled automatically when the camera zooms. Keys: - / =");
         ConvergenceOffset = cfg.Bind("Stereo", "ConvergenceOffset", -14f,
@@ -36,7 +36,7 @@ public static class Settings
         MonoWhenPaused = cfg.Bind("Stereo", "MonoWhenPaused", true,
             "Show the same image to both eyes while the game is paused (menus sit close to the camera and don't fuse).");
         EyeResolutionScale = cfg.Bind("Stereo", "EyeResolutionScale", 1.0f, "Per-eye render size relative to the game window.");
-        OverlayEnabled = cfg.Bind("VR", "OverlayEnabled", false,
+        OverlayEnabled = cfg.Bind("VR", "OverlayEnabled", true,
             "Show the stereo pair in the headset as a floating SteamVR 3D window (needs Stereo.Enabled). Key: F11. Recenter with the headset's own recenter (Steam Frame: hold the Steam button).");
         OverlayWidth = cfg.Bind("VR", "OverlayWidth", 2.5f, "Width of the floating window in meters. Keys: PageUp / PageDown");
         OverlayDistance = cfg.Bind("VR", "OverlayDistance", 2.5f, "Distance from your head in meters. Keys: Home (closer) / End (further)");
@@ -45,7 +45,7 @@ public static class Settings
         var modeDef = new ConfigDefinition("VR", "Mode");
         var oldMode = cfg.ContainsKey(modeDef) ? cfg[modeDef].BoxedValue as string : null;
         cfg.Remove(modeDef);
-        VrMode = cfg.Bind("VR", "Mode", "Window",
+        VrMode = cfg.Bind("VR", "Mode", "Scene",
             new ConfigDescription("Window = floating 3D window placed by the mod. Scene = experimental: the game becomes a full VR app (replacing the Frame's flat screen) and shows the same 3D window in an empty scene. Tab = experimental: our own SteamVR dashboard tab in 3D, replacing the Frame's flat game screen. Key: Ctrl+F11",
                 new AcceptableValueList<string>("Window", "Scene", "Tab")));
         if (oldMode != null) VrMode.Value = oldMode;

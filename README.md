@@ -1,40 +1,59 @@
 # OriVRMod
 
-Stereoscopic 3D for *Ori and the Will of the Wisps* in VR. The game still plays
-in a flat window, but each eye gets its own render, so the game's layered 3D
-scenes show real depth.
+Stereoscopic 3D for *Ori and the Will of the Wisps* on a VR headset. The game
+becomes a VR app and plays on a big screen in front of you, with each eye
+getting its own render, so the game's layered scenes show real depth.
 
 Developed on a Steam Frame (ARM64, Proton ARM64 + FEX), but nothing here is
 Frame-specific in principle.
 
-**Status:** BepInEx runs under Proton/FEX; side-by-side stereo renders in the window; SteamVR stereo overlay output is written but untested.
+**Status:** playable on the Steam Frame. 3D, Frame controllers and the in-game
+toggle all work. SteamVR still shows its menu ("wine-preloader") once at launch:
+press *Resume Game*.
 
-## Controls
+![Options > Gameplay with the Immersive 3D toggle](docs/images/options-immersive-3d.jpg)
+
+## Playing
+
+- **Immersive 3D** lives in *Options → Gameplay*. Off shows the same image to
+  both eyes (flat 2D) without leaving VR, so you can switch at any time.
+- **Recenter** with the headset's own recenter (Steam Frame: hold the Steam button).
+  The screen sits straight ahead of SteamVR's seated origin; the mod stores no
+  position of its own.
+- Play with the Frame controllers; they act as a gamepad.
+
+## Settings and developer keys
+
+All settings live in `BepInEx/config/com.ozten.orivr.cfg` and are re-read within
+a second when the file changes. These keyboard keys are for development and tuning:
 
 | Key | Action |
 |---|---|
-| F9 | Stereo on/off |
-| F11 | Show the 3D image in the headset (SteamVR overlay) |
-| Shift+F11 | Recenter (same as the headset's own recenter: on the Steam Frame, hold the Steam button) |
+| F9 | 3D on/off (same as the menu toggle) |
+| F11 | Show/hide the headset view |
+| Shift+F11 | Recenter |
+| Ctrl+F11 | VR mode: Scene (default, game is a VR app) or Window (floating overlay next to the Frame's own screen) |
 | Ctrl+Shift+S / E / V / R / M | No-Fn versions of F9 / F10 / F11 / Shift+F11 / Ctrl+F11 |
-| Ctrl+F11 | Switch VR mode: floating Window or experimental Scene (game becomes a full VR app) |
 | F10 | Swap eyes |
 | `-` / `=` | Eye separation |
 | `[` / `]` | Zero-parallax (screen) depth |
+| PgUp / PgDn, Home / End | Screen size, distance |
 | F8 | Write a camera report and capture both eye images |
 | F7 | Reload the core plugin |
 
-The 3D window sits straight ahead of SteamVR's seated origin, so the headset's
-system recenter puts it in front of you; the mod saves no position of its own.
+## How it works
 
-All settings live in `BepInEx/config/com.ozten.orivr.cfg` and are re-read within a second when the file changes.
-
-## How it works (planned)
-
-1. A BepInEx 6 IL2CPP plugin clones the game camera and renders left/right eye
-   views with a horizontal offset. The HUD is rendered at zero offset.
-2. The stereo pair is shown as an OpenVR overlay with side-by-side stereo
-   (`VROverlayFlags_SideBySide_Parallel`), so it floats in VR as a 3D window.
+1. A BepInEx 6 IL2CPP plugin redirects the game camera into a left-eye texture
+   and renders it a second time per frame, offset sideways with an off-axis
+   projection, for the right eye. Separation and screen depth follow the camera's
+   zoom, so cutscenes and menus stay comfortable.
+2. The game registers with SteamVR as a scene app and shows the pair as a
+   side-by-side stereo overlay (`VROverlayFlags_SideBySide_Parallel`), so the
+   Frame hides its own flat screen and you see one 3D screen.
+3. Frame controller input comes in through SteamVR Input and is fed to the game
+   as a gamepad (Harmony patches on its controller readers).
+4. The *Immersive 3D* option is a clone of the game's own "Show Map Trail" row,
+   added to the Gameplay options page at runtime.
 
 ## Usage
 

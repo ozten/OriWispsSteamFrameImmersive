@@ -267,7 +267,7 @@ public class VrOverlay
         if (sbs == null || sbs.width != w * 2 || sbs.height != h)
         {
             if (sbs != null) sbs.Release();
-            sbs = new RenderTexture(w * 2, h, 0, RenderTextureFormat.Default) { name = "OriVR_SBS" };
+            sbs = new RenderTexture(w * 2, h, 0, RenderTextureFormat.Default) { name = "OriVR_SBS", hideFlags = HideFlags.DontUnloadUnusedAsset };
             sbs.Create();
         }
         Graphics.CopyTexture(left, 0, 0, 0, 0, w, h, sbs, 0, 0, 0, 0);
@@ -321,7 +321,7 @@ public class VrOverlay
         }
         if (sceneTex == null)
         {
-            sceneTex = new RenderTexture(256, 256, 0, RenderTextureFormat.Default) { name = "OriVR_Scene" };
+            sceneTex = new RenderTexture(256, 256, 0, RenderTextureFormat.Default) { name = "OriVR_Scene", hideFlags = HideFlags.DontUnloadUnusedAsset };
             sceneTex.Create();
             var prev = RenderTexture.active;
             RenderTexture.active = sceneTex;

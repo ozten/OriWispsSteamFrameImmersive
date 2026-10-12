@@ -159,7 +159,9 @@ public class StereoController
         overlay.Stop();
         Deactivate();
         UnhookCallbacks();
-        if (LeftEye != null) { LeftEye.Release(); RightEye.Release(); LeftEye = RightEye = null; }
+        if (LeftEye != null) LeftEye.Release();
+        if (RightEye != null) RightEye.Release();
+        LeftEye = RightEye = null;
     }
 
     private void EnsureTextures()
@@ -167,8 +169,10 @@ public class StereoController
         var scale = Mathf.Clamp(Settings.EyeResolutionScale.Value, 0.25f, 2f);
         var w = Mathf.Max(64, (int)(Screen.width * scale));
         var h = Mathf.Max(64, (int)(Screen.height * scale));
-        if (LeftEye != null && LeftEye.width == w && LeftEye.height == h) return;
-        if (LeftEye != null) { LeftEye.Release(); RightEye.Release(); }
+        // Unity-null check: a texture the game destroyed still has a managed wrapper.
+        if (LeftEye != null && RightEye != null && LeftEye.width == w && LeftEye.height == h) return;
+        if (LeftEye != null) LeftEye.Release();
+        if (RightEye != null) RightEye.Release();
         LeftEye = MakeEye("OriVR_LeftEye", w, h);
         RightEye = MakeEye("OriVR_RightEye", w, h);
         if (active && Cam != null) Cam.targetTexture = LeftEye;
@@ -176,7 +180,9 @@ public class StereoController
 
     private static RenderTexture MakeEye(string name, int w, int h)
     {
-        var rt = new RenderTexture(w, h, 24, RenderTextureFormat.Default) { name = name };
+        // Ori calls Resources.UnloadUnusedAssets on menus and level loads, which destroys any texture
+        // nothing references at that moment (the right eye while 3D is off): keep ours.
+        var rt = new RenderTexture(w, h, 24, RenderTextureFormat.Default) { name = name, hideFlags = HideFlags.DontUnloadUnusedAsset };
         rt.Create();
         return rt;
     }
