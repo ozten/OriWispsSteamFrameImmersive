@@ -22,6 +22,8 @@ public sealed class CoreModule : IModule
     public void Update()
     {
         probe.Update();
+        MenuProbe.Update();
+        ImmersiveMenu.Update();
         stereo.Update();
     }
 
@@ -31,6 +33,7 @@ public sealed class CoreModule : IModule
     public void OnPostRender(Camera cam) { }
     public void Shutdown()
     {
+        ImmersiveMenu.Remove();
         InputBridge.Uninstall();
         stereo.Shutdown();
     }

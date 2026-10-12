@@ -78,6 +78,7 @@ public class VrOverlay
                 identified = false;
                 Log.Info($"OpenVR scene app: canRender={OpenVR.Compositor.CanRenderScene()}");
                 InputBridge.OnSessionStart(pluginDir);
+                Identify(UnixPid());
             }
             var overlay = OpenVR.Overlay;
             EVROverlayError oerr;
@@ -197,6 +198,22 @@ public class VrOverlay
         Log.Info($"VR window placed {distance:F2} m ahead of the seated origin, {width:F2} m wide.");
     }
 
+    /// Tell SteamVR this scene app is Ori (otherwise it shows up as "wine-preloader").
+    private void Identify(uint pid)
+    {
+        if (identified || pid == 0) return;
+        var err = OpenVR.Applications.IdentifyApplication(pid, "steam.app.1057090");
+        identified = err == EVRApplicationError.None;
+        Log.Info($"IdentifyApplication(pid {pid}, steam.app.1057090): {err}");
+    }
+
+    /// SteamVR knows us by our Linux pid (wine-preloader), not the Windows one. Wine maps Z: to /.
+    private static uint UnixPid()
+    {
+        try { return uint.Parse(File.ReadAllText(@"Z:\proc\self\stat").Split(' ')[0]); }
+        catch (Exception e) { Log.Info($"Unix pid unavailable ({e.GetType().Name}); identifying later."); return 0; }
+    }
+
     private string lastTabState = "";
     private float nextPoll;
 
@@ -211,13 +228,7 @@ public class VrOverlay
         {
             var sc = OpenVR.Compositor;
             var focusProc = sc.GetCurrentSceneFocusProcess();
-            if (!identified && focusProc != 0 && OpenVR.System.IsInputAvailable())
-            {
-                // Tell SteamVR this scene app is Ori (otherwise it shows up as "wine-preloader").
-                identified = true;
-                var aerr = OpenVR.Applications.IdentifyApplication(focusProc, "steam.app.1057090");
-                Log.Info($"IdentifyApplication(pid {focusProc}, steam.app.1057090): {aerr}");
-            }
+            if (!identified && focusProc != 0 && OpenVR.System.IsInputAvailable()) Identify(focusProc);
             var st = $"dashboardVisible={o.IsDashboardVisible()} windowVisible={o.IsOverlayVisible(handle)} " +
                      $"sceneFocus={OpenVR.System.IsInputAvailable()} sceneProcess={sc.GetCurrentSceneFocusProcess()} fullscreen={sc.IsFullscreen()}";
             if (st == lastTabState) return;
@@ -260,6 +271,13 @@ public class VrOverlay
             Settings.OverlayEnabled.Value = false;
         }
         if (IsScene) SubmitScene();
+    }
+
+    /// Scene mode without eye images (no gameplay camera, e.g. loading): keep the compositor fed so
+    /// SteamVR doesn't take over; the window keeps its last image.
+    public void KeepAlive()
+    {
+        if (Running && IsScene) SubmitScene();
     }
 
     /// Scene mode: we're the VR app, so the compositor needs an eye frame from us every frame or it

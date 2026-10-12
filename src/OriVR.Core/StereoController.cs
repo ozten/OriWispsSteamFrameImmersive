@@ -47,13 +47,16 @@ public class StereoController
             }
         }
 
+        // In VR the eye pipeline runs even with 3D off: the headset then gets the same image in both eyes.
         var main = Camera.main;
-        var want = Settings.StereoEnabled.Value && main != null && !main.orthographic;
+        var want = (Settings.StereoEnabled.Value || Settings.OverlayEnabled.Value) && main != null && !main.orthographic;
         if (main != Cam || !want) Deactivate();
         if (want && !active) Activate(main);
         if (active) EnsureTextures();
 
-        var wantOverlay = active && Settings.OverlayEnabled.Value;
+        // Scene mode stays up without a camera (loading screens) and with 3D off: every hand-back to the
+        // Frame's flat screen pops SteamVR's dashboard and costs a VR re-init.
+        var wantOverlay = Settings.OverlayEnabled.Value && (active || Settings.VrMode.Value == "Scene");
         if (wantOverlay && overlay.Running && overlay.Mode != Settings.VrMode.Value) overlay.Stop(); // mode switched
         if (wantOverlay && !overlay.Running && !overlayFailed) overlayFailed = !overlay.Start(pluginDir);
         if (overlay.Running) overlay.Poll();
@@ -233,14 +236,18 @@ public class StereoController
 
     public void EndOfFrame()
     {
-        if (!active || Cam == null) return;
+        if (!active || Cam == null)
+        {
+            overlay.KeepAlive();
+            return;
+        }
         var paused = Paused;
         if (paused != wasPaused)
         {
             wasPaused = paused;
             Log.Info($"{(paused ? "Paused" : "Unpaused")} (timeScale={Time.timeScale}) cam pos={Cam.transform.position} fov={Cam.fieldOfView:F1}");
         }
-        var mono = paused && Settings.MonoWhenPaused.Value;
+        var mono = !Settings.StereoEnabled.Value || (paused && Settings.MonoWhenPaused.Value);
         try
         {
             if (!mono) RenderRightEye();
